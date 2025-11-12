@@ -1,0 +1,417 @@
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { FileText, Download, TrendingUp, DollarSign, AlertCircle, CheckCircle } from "lucide-react";
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
+
+const CHART_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+
+const taxData = [
+  { month: "Jan", cgst: 12000, sgst: 12000, igst: 8000, totalTax: 32000 },
+  { month: "Feb", cgst: 15000, sgst: 15000, igst: 9500, totalTax: 39500 },
+  { month: "Mar", cgst: 13500, sgst: 13500, igst: 8200, totalTax: 35200 },
+  { month: "Apr", cgst: 18000, sgst: 18000, igst: 10800, totalTax: 46800 },
+  { month: "May", cgst: 16500, sgst: 16500, igst: 9900, totalTax: 42900 },
+  { month: "Jun", cgst: 21000, sgst: 21000, igst: 12600, totalTax: 54600 },
+];
+
+const taxBreakdown = [
+  { name: "CGST (9%)", value: 96000, revenue: 1066666, color: "#10B981" },
+  { name: "SGST (9%)", value: 96000, revenue: 1066666, color: "#3B82F6" },
+  { name: "IGST (5%)", value: 58900, revenue: 1178000, color: "#F59E0B" },
+];
+
+const invoiceWiseTax = [
+  { invoiceNo: "INV-001", date: "2024-11-01", amount: 45000, cgst: 4050, sgst: 4050, total: 8100, status: "Paid" },
+  { invoiceNo: "INV-002", date: "2024-11-02", amount: 38000, cgst: 3420, sgst: 3420, total: 6840, status: "Paid" },
+  { invoiceNo: "INV-003", date: "2024-11-03", amount: 52000, cgst: 4680, sgst: 4680, total: 9360, status: "Paid" },
+  { invoiceNo: "INV-004", date: "2024-11-04", amount: 61000, cgst: 5490, sgst: 5490, total: 10980, status: "Paid" },
+  { invoiceNo: "INV-005", date: "2024-11-05", amount: 55000, cgst: 4950, sgst: 4950, total: 9900, status: "Pending" },
+  { invoiceNo: "INV-006", date: "2024-11-06", amount: 72000, cgst: 6480, sgst: 6480, total: 12960, status: "Paid" },
+];
+
+export default function TaxReportsPage() {
+  const [dateRange, setDateRange] = useState("month");
+  const [chartType, setChartType] = useState("line");
+
+  const totalInvoiceAmount = invoiceWiseTax.reduce((sum, inv) => sum + inv.amount, 0);
+  const totalCGST = invoiceWiseTax.reduce((sum, inv) => sum + inv.cgst, 0);
+  const totalSGST = invoiceWiseTax.reduce((sum, inv) => sum + inv.sgst, 0);
+  const totalTax = totalCGST + totalSGST;
+  const paidTax = invoiceWiseTax.filter(inv => inv.status === "Paid").reduce((sum, inv) => sum + inv.total, 0);
+  const pendingTax = invoiceWiseTax.filter(inv => inv.status === "Pending").reduce((sum, inv) => sum + inv.total, 0);
+
+  return (
+    <div className="min-h-screen bg-white p-4 md:p-8">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8"
+      >
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900">Tax Reports & Compliance</h1>
+            <p className="text-gray-600 mt-2">Track CGST, SGST, and IGST across all invoices</p>
+          </div>
+          <div className="flex gap-2">
+            <select
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+              className="px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium"
+            >
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="year">This Year</option>
+              <option value="custom">Custom Date Range</option>
+            </select>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold transition-colors flex items-center gap-2"
+            >
+              <Download className="w-5 h-5" />
+              Export PDF
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Summary Cards */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ staggerChildren: 0.1 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-6 rounded-lg bg-gradient-to-br from-green-50 to-green-100 border border-green-300"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-gray-600 text-sm font-medium">Total Tax Collected</p>
+              <h3 className="text-3xl font-bold text-green-600 mt-2">₹{totalTax.toLocaleString()}</h3>
+            </div>
+            <FileText className="w-12 h-12 text-green-600 opacity-20" />
+          </div>
+          <p className="text-xs text-gray-600">From {invoiceWiseTax.length} invoices</p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="p-6 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-300"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-gray-600 text-sm font-medium">CGST (9%)</p>
+              <h3 className="text-3xl font-bold text-blue-600 mt-2">₹{totalCGST.toLocaleString()}</h3>
+            </div>
+            <DollarSign className="w-12 h-12 text-blue-600 opacity-20" />
+          </div>
+          <p className="text-xs text-gray-600">Central GST</p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="p-6 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-300"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-gray-600 text-sm font-medium">SGST (9%)</p>
+              <h3 className="text-3xl font-bold text-orange-600 mt-2">₹{totalSGST.toLocaleString()}</h3>
+            </div>
+            <TrendingUp className="w-12 h-12 text-orange-600 opacity-20" />
+          </div>
+          <p className="text-xs text-gray-600">State GST</p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="p-6 rounded-lg bg-gradient-to-br from-red-50 to-red-100 border border-red-300"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-gray-600 text-sm font-medium">Tax Status</p>
+              <h3 className="text-3xl font-bold text-red-600 mt-2">₹{pendingTax.toLocaleString()}</h3>
+            </div>
+            <AlertCircle className="w-12 h-12 text-red-600 opacity-20" />
+          </div>
+          <p className="text-xs text-gray-600">Pending Collection</p>
+        </motion.div>
+      </motion.div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Tax Trend Chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-6 rounded-lg bg-white border border-gray-200 shadow-sm"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-bold text-gray-900">Tax Collection Trend</h3>
+            <div className="flex gap-2">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                onClick={() => setChartType("line")}
+                className={`px-4 py-2 rounded-lg font-bold transition-colors ${
+                  chartType === "line"
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-100 text-gray-900 hover:bg-gray-200"
+                }`}
+              >
+                Line
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                onClick={() => setChartType("bar")}
+                className={`px-4 py-2 rounded-lg font-bold transition-colors ${
+                  chartType === "bar"
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-100 text-gray-900 hover:bg-gray-200"
+                }`}
+              >
+                Bar
+              </motion.button>
+            </div>
+          </div>
+
+          <ResponsiveContainer width="100%" height={300}>
+            {chartType === "line" ? (
+              <LineChart data={taxData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="month" stroke="#6B7280" />
+                <YAxis stroke="#6B7280" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#FFF",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  }}
+                  cursor={{ stroke: "#10B981", strokeWidth: 2 }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="cgst"
+                  stroke="#10B981"
+                  strokeWidth={3}
+                  dot={{ fill: "#10B981", r: 6 }}
+                  activeDot={{ r: 8 }}
+                  name="CGST (₹)"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="sgst"
+                  stroke="#3B82F6"
+                  strokeWidth={3}
+                  dot={{ fill: "#3B82F6", r: 6 }}
+                  activeDot={{ r: 8 }}
+                  name="SGST (₹)"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="igst"
+                  stroke="#F59E0B"
+                  strokeWidth={3}
+                  dot={{ fill: "#F59E0B", r: 6 }}
+                  activeDot={{ r: 8 }}
+                  name="IGST (₹)"
+                />
+              </LineChart>
+            ) : (
+              <BarChart data={taxData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="month" stroke="#6B7280" />
+                <YAxis stroke="#6B7280" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#FFF",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="cgst" fill="#10B981" name="CGST (₹)" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="sgst" fill="#3B82F6" name="SGST (₹)" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="igst" fill="#F59E0B" name="IGST (₹)" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            )}
+          </ResponsiveContainer>
+        </motion.div>
+
+        {/* Tax Breakdown Pie Chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="p-6 rounded-lg bg-white border border-gray-200 shadow-sm"
+        >
+          <h3 className="text-2xl font-bold text-gray-900 mb-6">Tax Type Breakdown</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={taxBreakdown}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, value }) => `${name}\n₹${value.toLocaleString()}`}
+                outerRadius={100}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {taxBreakdown.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => `₹${value.toLocaleString()}`} />
+            </PieChart>
+          </ResponsiveContainer>
+        </motion.div>
+      </div>
+
+      {/* Tax Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-6 rounded-lg bg-white border border-gray-200 shadow-sm"
+        >
+          <p className="text-gray-600 text-sm font-medium mb-2">Gross Revenue</p>
+          <p className="text-3xl font-bold text-gray-900">₹{totalInvoiceAmount.toLocaleString()}</p>
+          <p className="text-xs text-gray-600 mt-2">Before tax</p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="p-6 rounded-lg bg-white border border-gray-200 shadow-sm"
+        >
+          <p className="text-gray-600 text-sm font-medium mb-2">Effective Tax Rate</p>
+          <p className="text-3xl font-bold text-blue-600">
+            {((totalTax / totalInvoiceAmount) * 100).toFixed(2)}%
+          </p>
+          <p className="text-xs text-gray-600 mt-2">Average</p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="p-6 rounded-lg bg-green-50 border border-green-300 shadow-sm"
+        >
+          <p className="text-gray-600 text-sm font-medium mb-2">Tax Collected</p>
+          <p className="text-3xl font-bold text-green-600">₹{paidTax.toLocaleString()}</p>
+          <p className="text-xs text-gray-600 mt-2">Received</p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="p-6 rounded-lg bg-red-50 border border-red-300 shadow-sm"
+        >
+          <p className="text-gray-600 text-sm font-medium mb-2">Compliance Status</p>
+          <p className="text-3xl font-bold text-red-600">
+            {Math.round((paidTax / totalTax) * 100)}%
+          </p>
+          <p className="text-xs text-gray-600 mt-2">Collected</p>
+        </motion.div>
+      </div>
+
+      {/* Invoice-wise Tax Details */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="p-6 rounded-lg bg-white border border-gray-200 shadow-sm"
+      >
+        <h3 className="text-2xl font-bold text-gray-900 mb-6">Invoice-wise Tax Details</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gradient-to-r from-green-50 to-blue-50 border-b-2 border-green-200">
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Invoice #</th>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Date</th>
+                <th className="px-6 py-4 text-right text-sm font-bold text-gray-900">Amount</th>
+                <th className="px-6 py-4 text-right text-sm font-bold text-gray-900">CGST (9%)</th>
+                <th className="px-6 py-4 text-right text-sm font-bold text-gray-900">SGST (9%)</th>
+                <th className="px-6 py-4 text-right text-sm font-bold text-gray-900">Total Tax</th>
+                <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {invoiceWiseTax.map((invoice, idx) => (
+                <motion.tr
+                  key={invoice.invoiceNo}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="hover:bg-gray-50 transition-colors"
+                >
+                  <td className="px-6 py-4 text-sm font-semibold text-gray-900">{invoice.invoiceNo}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700">{invoice.date}</td>
+                  <td className="px-6 py-4 text-right text-sm font-bold text-gray-900">₹{invoice.amount.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-right text-sm font-bold text-green-600">₹{invoice.cgst.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-right text-sm font-bold text-blue-600">₹{invoice.sgst.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-right text-sm font-bold text-gray-900">₹{invoice.total.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-center">
+                    <span
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
+                        invoice.status === "Paid"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {invoice.status === "Paid" ? (
+                        <>
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Paid
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="w-3 h-3 mr-1" />
+                          Pending
+                        </>
+                      )}
+                    </span>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+            <tfoot className="bg-gray-50 border-t-2 border-gray-300">
+              <tr>
+                <td colSpan="2" className="px-6 py-4 text-sm font-bold text-gray-900">
+                  Total
+                </td>
+                <td className="px-6 py-4 text-right text-sm font-bold text-gray-900">
+                  ₹{totalInvoiceAmount.toLocaleString()}
+                </td>
+                <td className="px-6 py-4 text-right text-sm font-bold text-green-600">
+                  ₹{totalCGST.toLocaleString()}
+                </td>
+                <td className="px-6 py-4 text-right text-sm font-bold text-blue-600">
+                  ₹{totalSGST.toLocaleString()}
+                </td>
+                <td className="px-6 py-4 text-right text-sm font-bold text-gray-900">
+                  ₹{totalTax.toLocaleString()}
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
