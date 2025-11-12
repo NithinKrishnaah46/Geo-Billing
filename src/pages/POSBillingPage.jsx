@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 // eslint-disable-next-line no-unused-vars
-import { Search, Barcode, Plus, Minus, Trash2, Phone, Mail, FileText, Printer, Save, Send, MessageSquare, X, CheckCircle2 } from "lucide-react";
+import { Search, Barcode, Plus, Minus, Trash2, Phone, Mail, FileText, Printer, Save, Send, MessageSquare, X, CheckCircle2, Download, Share2 } from "lucide-react";
 
 const SAMPLE_PRODUCTS = [
   { id: "p1", name: "T-shirt - Blue", price: 499, sku: "TS-BL-001", stock: 42 },
@@ -110,7 +110,115 @@ export default function POSBillingPage() {
       alert("⚠️ Please select a customer first");
       return;
     }
-    alert(`SMS sent to ${selectedCustomer.phone}:\n\nInvoice #${invoiceNo}\nAmount: ₹${total}\nThank you for your purchase!`);
+    if (cart.length === 0) {
+      alert("⚠️ Please add items to the cart");
+      return;
+    }
+    // Simulate SMS sending
+    setNotification({ type: "sms", message: "SMS sent successfully" });
+    setTimeout(() => setNotification(null), 3000);
+  }
+
+  function handleSaveInvoice() {
+    if (!selectedCustomer || cart.length === 0) {
+      alert("⚠️ Please select a customer and add items to cart");
+      return;
+    }
+    // Create invoice data
+    const invoiceData = {
+      invoiceNo,
+      date: new Date().toLocaleDateString(),
+      customer: selectedCustomer,
+      items: cart,
+      subtotal,
+      cgst,
+      sgst,
+      total,
+      paymentMode,
+    };
+    // Save to localStorage
+    const savedInvoices = JSON.parse(localStorage.getItem("invoices") || "[]");
+    savedInvoices.push(invoiceData);
+    localStorage.setItem("invoices", JSON.stringify(savedInvoices));
+    
+    setNotification({ type: "save", message: "Invoice saved successfully" });
+    setTimeout(() => setNotification(null), 3000);
+  }
+
+  function handlePrintInvoice() {
+    if (!selectedCustomer || cart.length === 0) {
+      alert("⚠️ Please select a customer and add items to cart");
+      return;
+    }
+    // Simulate print dialog
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Invoice #${invoiceNo}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { text-align: center; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .summary { margin-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <h1>Invoice #${invoiceNo}</h1>
+          <p><strong>Customer:</strong> ${selectedCustomer.name}</p>
+          <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+          <table>
+            <tr>
+              <th>Product</th>
+              <th>Price</th>
+              <th>Qty</th>
+              <th>Total</th>
+            </tr>
+            ${cart.map(item => `
+              <tr>
+                <td>${item.name}</td>
+                <td>₹${item.price}</td>
+                <td>${item.qty}</td>
+                <td>₹${item.price * item.qty}</td>
+              </tr>
+            `).join("")}
+          </table>
+          <div class="summary">
+            <p><strong>Subtotal:</strong> ₹${subtotal}</p>
+            <p><strong>CGST (9%):</strong> ₹${cgst}</p>
+            <p><strong>SGST (9%):</strong> ₹${sgst}</p>
+            <h3><strong>Total:</strong> ₹${total}</h3>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+    
+    setNotification({ type: "print", message: "Invoice printed successfully" });
+    setTimeout(() => setNotification(null), 3000);
+  }
+
+  function handleSendWhatsApp() {
+    if (!selectedCustomer) {
+      alert("⚠️ Please select a customer first");
+      return;
+    }
+    if (cart.length === 0) {
+      alert("⚠️ Please add items to the cart");
+      return;
+    }
+    // Format message for WhatsApp
+    const message = `Hello ${selectedCustomer.name},\n\nYour Invoice #${invoiceNo}\nTotal Amount: ₹${total}\n\nThank you for your purchase!`;
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappNumber = selectedCustomer.phone.replace(/\D/g, "");
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+    window.open(whatsappUrl, "_blank");
+    
+    setNotification({ type: "whatsapp", message: "WhatsApp message sent" });
+    setTimeout(() => setNotification(null), 3000);
   }
 
   function addToCart(product) {
@@ -483,6 +591,7 @@ export default function POSBillingPage() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handleSaveInvoice}
               className="w-full py-4 rounded-lg bg-gradient-to-r from-green-500 to-green-600 text-white font-bold hover:shadow-lg transition-shadow flex items-center justify-center gap-2"
             >
               <Save className="w-5 h-5" />
@@ -491,6 +600,7 @@ export default function POSBillingPage() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handlePrintInvoice}
               className="w-full py-3 rounded-lg border-2 border-gray-300 text-gray-900 font-bold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
             >
               <Printer className="w-5 h-5" />
@@ -508,6 +618,7 @@ export default function POSBillingPage() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handleSendWhatsApp}
               className="w-full py-3 rounded-lg border-2 border-green-500 text-green-600 font-bold hover:bg-green-50 transition-colors flex items-center justify-center gap-2"
             >
               <Send className="w-5 h-5" />
@@ -748,6 +859,122 @@ export default function POSBillingPage() {
               </div>
             </motion.div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Customer Added</h3>
+            <p className="text-gray-600">{notification?.message}</p>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Success Notification - Invoice Saved */}
+      {notification?.type === "save" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.5 }}
+            animate={{ scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-md"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              className="flex justify-center mb-4"
+            >
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-12 h-12 text-green-600" />
+              </div>
+            </motion.div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Invoice Saved</h3>
+            <p className="text-gray-600">{notification?.message}</p>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Success Notification - Invoice Printed */}
+      {notification?.type === "print" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.5 }}
+            animate={{ scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-md"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              className="flex justify-center mb-4"
+            >
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-12 h-12 text-green-600" />
+              </div>
+            </motion.div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Invoice Printed</h3>
+            <p className="text-gray-600">{notification?.message}</p>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Success Notification - SMS Sent */}
+      {notification?.type === "sms" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.5 }}
+            animate={{ scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-md"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              className="flex justify-center mb-4"
+            >
+              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-12 h-12 text-blue-600" />
+              </div>
+            </motion.div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">SMS Sent</h3>
+            <p className="text-gray-600">{notification?.message}</p>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Success Notification - WhatsApp Sent */}
+      {notification?.type === "whatsapp" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.5 }}
+            animate={{ scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-md"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              className="flex justify-center mb-4"
+            >
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-12 h-12 text-green-600" />
+              </div>
+            </motion.div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">WhatsApp Message Sent</h3>
             <p className="text-gray-600">{notification?.message}</p>
           </motion.div>
         </motion.div>
