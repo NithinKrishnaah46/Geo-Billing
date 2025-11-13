@@ -165,23 +165,33 @@ export default function Navbar() {
                         key={notif.id}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className={`p-4 cursor-pointer hover:bg-white/5 transition-colors ${
-                          !notif.read ? "bg-white/5" : ""
+                        className={`p-4 cursor-pointer transition-all duration-200 ${
+                          !notif.read
+                            ? "bg-gradient-to-r from-white/10 to-white/5 hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10"
+                            : "bg-transparent hover:bg-white/3 opacity-60"
                         }`}
                         onClick={() => markAsRead(notif.id)}
                       >
                         <div className="flex gap-3">
-                          <span className="text-xl flex-shrink-0">
+                          <span className={`text-xl flex-shrink-0 transition-opacity ${
+                            !notif.read ? "" : "opacity-50"
+                          }`}>
                             {getNotificationIcon(notif.type)}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-white truncate">
+                            <p className={`text-sm font-semibold truncate transition-colors ${
+                              !notif.read ? "text-white" : "text-white/60"
+                            }`}>
                               {notif.title}
                             </p>
-                            <p className="text-xs text-white/60 line-clamp-2 mt-1">
+                            <p className={`text-xs line-clamp-2 mt-1 transition-colors ${
+                              !notif.read ? "text-white/60" : "text-white/40"
+                            }`}>
                               {notif.message}
                             </p>
-                            <p className="text-xs text-white/40 mt-2">
+                            <p className={`text-xs mt-2 transition-colors ${
+                              !notif.read ? "text-white/40" : "text-white/30"
+                            }`}>
                               {formatTime(notif.timestamp)}
                             </p>
                           </div>
@@ -190,7 +200,11 @@ export default function Navbar() {
                               e.stopPropagation();
                               clearNotification(notif.id);
                             }}
-                            className="text-white/40 hover:text-white/70 transition-colors"
+                            className={`transition-colors ${
+                              !notif.read
+                                ? "text-white/40 hover:text-white/70"
+                                : "text-white/20 hover:text-white/40"
+                            }`}
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -371,23 +385,33 @@ export default function Navbar() {
                     key={notif.id}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className={`p-4 cursor-pointer hover:bg-white/5 transition-colors ${
-                      !notif.read ? "bg-white/5" : ""
+                    className={`p-4 cursor-pointer transition-all duration-200 ${
+                      !notif.read
+                        ? "bg-gradient-to-r from-white/10 to-white/5 hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10"
+                        : "bg-transparent hover:bg-white/3 opacity-60"
                     }`}
                     onClick={() => markAsRead(notif.id)}
                   >
                     <div className="flex gap-3">
-                      <span className="text-xl flex-shrink-0">
+                      <span className={`text-xl flex-shrink-0 transition-opacity ${
+                        !notif.read ? "" : "opacity-50"
+                      }`}>
                         {getNotificationIcon(notif.type)}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">
+                        <p className={`text-sm font-semibold truncate transition-colors ${
+                          !notif.read ? "text-white" : "text-white/60"
+                        }`}>
                           {notif.title}
                         </p>
-                        <p className="text-xs text-white/60 line-clamp-2 mt-1">
+                        <p className={`text-xs line-clamp-2 mt-1 transition-colors ${
+                          !notif.read ? "text-white/60" : "text-white/40"
+                        }`}>
                           {notif.message}
                         </p>
-                        <p className="text-xs text-white/40 mt-2">
+                        <p className={`text-xs mt-2 transition-colors ${
+                          !notif.read ? "text-white/40" : "text-white/30"
+                        }`}>
                           {formatTime(notif.timestamp)}
                         </p>
                       </div>
@@ -396,7 +420,11 @@ export default function Navbar() {
                           e.stopPropagation();
                           clearNotification(notif.id);
                         }}
-                        className="text-white/40 hover:text-white/70 transition-colors"
+                        className={`transition-colors ${
+                          !notif.read
+                            ? "text-white/40 hover:text-white/70"
+                            : "text-white/20 hover:text-white/40"
+                        }`}
                       >
                         <X className="w-4 h-4" />
                       </button>
