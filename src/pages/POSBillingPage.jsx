@@ -40,6 +40,12 @@ export default function POSBillingPage() {
   const [newProduct, setNewProduct] = useState({ name: "", price: "", sku: "", stock: "" });
   const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", email: "", gst: "" });
   const [notification, setNotification] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [cashAmount, setCashAmount] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardCVV, setCardCVV] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [upiId, setUpiId] = useState("");
 
   // Initialize selected customer on first load
   useEffect(() => {
@@ -219,6 +225,69 @@ export default function POSBillingPage() {
     
     setNotification({ type: "whatsapp", message: "WhatsApp message sent" });
     setTimeout(() => setNotification(null), 3000);
+  }
+
+  function handleCashPayment() {
+    const amount = parseFloat(cashAmount);
+    if (!amount || amount <= 0) {
+      alert("⚠️ Please enter a valid amount");
+      return;
+    }
+    if (amount < total) {
+      alert(`⚠️ Amount is less than total. Need ₹${total - amount} more`);
+      return;
+    }
+    const change = amount - total;
+    setNotification({ type: "cash_success", message: `Payment successful! Change: ₹${change}` });
+    setTimeout(() => {
+      setNotification(null);
+      setCashAmount("");
+      setShowPaymentModal(false);
+      setCart([]);
+    }, 3000);
+  }
+
+  function handleCardPayment() {
+    if (!cardNumber || !cardCVV || !cardExpiry) {
+      alert("⚠️ Please enter all card details");
+      return;
+    }
+    if (cardNumber.length < 13 || cardNumber.length > 19) {
+      alert("⚠️ Please enter a valid card number");
+      return;
+    }
+    if (cardCVV.length !== 3) {
+      alert("⚠️ CVV must be 3 digits");
+      return;
+    }
+    setNotification({ type: "card_success", message: `Payment successful! Card ending in ${cardNumber.slice(-4)}` });
+    setTimeout(() => {
+      setNotification(null);
+      setCardNumber("");
+      setCardCVV("");
+      setCardExpiry("");
+      setShowPaymentModal(false);
+      setCart([]);
+    }, 3000);
+  }
+
+  function handleUPIPayment() {
+    if (!upiId) {
+      alert("⚠️ Please enter your UPI ID or scan QR code");
+      return;
+    }
+    setNotification({ type: "upi_success", message: `Payment successful! UPI: ${upiId}` });
+    setTimeout(() => {
+      setNotification(null);
+      setUpiId("");
+      setShowPaymentModal(false);
+      setCart([]);
+    }, 3000);
+  }
+
+  function handlePaymentModeClick(mode) {
+    setPaymentMode(mode);
+    setShowPaymentModal(true);
   }
 
   function addToCart(product) {
@@ -573,7 +642,7 @@ export default function POSBillingPage() {
                 <motion.button
                   key={mode.key}
                   whileHover={{ scale: 1.05 }}
-                  onClick={() => setPaymentMode(mode.key)}
+                  onClick={() => mode.key !== "credit" ? handlePaymentModeClick(mode.key) : setPaymentMode(mode.key)}
                   className={`p-3 rounded-lg font-bold text-sm transition-all ${
                     paymentMode === mode.key
                       ? "bg-green-500 text-white border-2 border-green-600"
@@ -975,6 +1044,265 @@ export default function POSBillingPage() {
               </div>
             </motion.div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">WhatsApp Message Sent</h3>
+            <p className="text-gray-600">{notification?.message}</p>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Payment Processing Modal */}
+      {showPaymentModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          onClick={() => setShowPaymentModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md max-h-96 overflow-y-auto"
+          >
+            {/* Cash Payment */}
+            {paymentMode === "cash" && (
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">💵 Cash Payment</h3>
+                <div className="bg-green-50 p-4 rounded-lg mb-4 border border-green-200">
+                  <p className="text-sm text-gray-600">Total Amount</p>
+                  <p className="text-3xl font-bold text-green-600">₹{total.toLocaleString()}</p>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-bold text-gray-700 block mb-2">Amount Received</label>
+                    <input
+                      type="number"
+                      value={cashAmount}
+                      onChange={(e) => setCashAmount(e.target.value)}
+                      placeholder="Enter amount received"
+                      className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
+                    />
+                  </div>
+                  {cashAmount && parseFloat(cashAmount) >= total && (
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <p className="text-sm text-gray-600">Change to Return</p>
+                      <p className="text-2xl font-bold text-blue-600">₹{(parseFloat(cashAmount) - total).toLocaleString()}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3 mt-6">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => setShowPaymentModal(false)}
+                    className="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-900 rounded-lg font-bold"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={handleCashPayment}
+                    className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold"
+                  >
+                    Complete Payment
+                  </motion.button>
+                </div>
+              </div>
+            )}
+
+            {/* Card Payment */}
+            {paymentMode === "card" && (
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">💳 Card Payment</h3>
+                <div className="bg-green-50 p-4 rounded-lg mb-4 border border-green-200">
+                  <p className="text-sm text-gray-600">Total Amount</p>
+                  <p className="text-3xl font-bold text-green-600">₹{total.toLocaleString()}</p>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-bold text-gray-700 block mb-2">Card Number</label>
+                    <input
+                      type="text"
+                      value={cardNumber}
+                      onChange={(e) => setCardNumber(e.target.value.replace(/\s/g, "").replace(/(\d{4})/g, "$1 ").trim())}
+                      placeholder="1234 5678 9012 3456"
+                      maxLength="19"
+                      className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 font-mono"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-bold text-gray-700 block mb-2">Expiry (MM/YY)</label>
+                      <input
+                        type="text"
+                        value={cardExpiry}
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/\D/g, "");
+                          if (val.length >= 2) val = val.slice(0, 2) + "/" + val.slice(2, 4);
+                          setCardExpiry(val);
+                        }}
+                        placeholder="MM/YY"
+                        maxLength="5"
+                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-bold text-gray-700 block mb-2">CVV</label>
+                      <input
+                        type="text"
+                        value={cardCVV}
+                        onChange={(e) => setCardCVV(e.target.value.replace(/\D/g, "").slice(0, 3))}
+                        placeholder="123"
+                        maxLength="3"
+                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-6">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => setShowPaymentModal(false)}
+                    className="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-900 rounded-lg font-bold"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={handleCardPayment}
+                    className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold"
+                  >
+                    Pay ₹{total}
+                  </motion.button>
+                </div>
+              </div>
+            )}
+
+            {/* UPI Payment */}
+            {paymentMode === "upi" && (
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">📱 UPI Payment</h3>
+                <div className="bg-green-50 p-4 rounded-lg mb-4 border border-green-200">
+                  <p className="text-sm text-gray-600">Total Amount</p>
+                  <p className="text-3xl font-bold text-green-600">₹{total.toLocaleString()}</p>
+                </div>
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50 mb-4">
+                    <p className="text-2xl mb-2">📲</p>
+                    <p className="text-sm font-bold text-gray-700">Scan QR Code</p>
+                    <p className="text-xs text-gray-500 mt-1">Using Google Pay or PhonePe</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-bold text-gray-700 block mb-2">Or Enter UPI ID</label>
+                    <input
+                      type="text"
+                      value={upiId}
+                      onChange={(e) => setUpiId(e.target.value)}
+                      placeholder="yourname@bank"
+                      className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-6">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => setShowPaymentModal(false)}
+                    className="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-900 rounded-lg font-bold"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={handleUPIPayment}
+                    className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold"
+                  >
+                    Pay ₹{total}
+                  </motion.button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Payment Success Notifications */}
+      {notification?.type === "cash_success" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.5 }}
+            animate={{ scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-md"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              className="flex justify-center mb-4"
+            >
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-12 h-12 text-green-600" />
+              </div>
+            </motion.div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">💵 Payment Successful</h3>
+            <p className="text-gray-600">{notification?.message}</p>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {notification?.type === "card_success" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.5 }}
+            animate={{ scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-md"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              className="flex justify-center mb-4"
+            >
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-12 h-12 text-green-600" />
+              </div>
+            </motion.div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">💳 Payment Successful</h3>
+            <p className="text-gray-600">{notification?.message}</p>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {notification?.type === "upi_success" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.5 }}
+            animate={{ scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-md"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              className="flex justify-center mb-4"
+            >
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-12 h-12 text-green-600" />
+              </div>
+            </motion.div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">📱 Payment Successful</h3>
             <p className="text-gray-600">{notification?.message}</p>
           </motion.div>
         </motion.div>
