@@ -1,417 +1,292 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Phone, Lock, CheckCircle2, User, ShieldAlert, TrendingUp } from "lucide-react";
+import { Phone, Lock, CheckCircle } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [step, setStep] = useState("phone"); // phone, otp, role
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const { login } = useAuth();
+  const [step, setStep] = useState(1);
+  const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [selectedRole, setSelectedRole] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState(null);
   const [error, setError] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [verifiedPhone, setVerifiedPhone] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Role options
   const roles = [
     {
-      id: "sales",
-      label: "Sales Executive",
-      icon: TrendingUp,
-      description: "Manage sales, billing & customers",
+      id: "ADMIN",
+      name: "Admin",
+      description: "Manage everything - users, inventory, reports, and sales",
+      color: "from-red-500 to-red-600",
+      icon: "👨‍💼",
+      permissions: "Full Access",
+    },
+    {
+      id: "OWNER",
+      name: "Owner",
+      description: "Manage customers, inventory, and business reports",
       color: "from-blue-500 to-blue-600",
+      icon: "👔",
+      permissions: "Customers • Inventory • Reports",
     },
     {
-      id: "admin",
-      label: "Admin",
-      icon: ShieldAlert,
-      description: "Manage inventory & reports",
-      color: "from-purple-500 to-purple-600",
-    },
-    {
-      id: "owner",
-      label: "Owner",
-      icon: User,
-      description: "Full access & analytics",
+      id: "SALES_EXECUTIVE",
+      name: "Sales Executive",
+      description: "Create bills and manage sales transactions",
       color: "from-green-500 to-green-600",
+      icon: "💼",
+      permissions: "POS • Inventory View",
     },
   ];
 
-  const handlePhoneSubmit = (e) => {
-    e.preventDefault();
+  const handlePhoneSubmit = () => {
     setError("");
-
-    // Validate phone number (10 digits)
-    if (phoneNumber.length !== 10 || !/^\d{10}$/.test(phoneNumber)) {
+    if (!phone.match(/^[0-9]{10}$/)) {
       setError("Please enter a valid 10-digit phone number");
       return;
     }
-
-    setLoading(true);
-    // Simulate OTP sending
-    setTimeout(() => {
-      setLoading(false);
-      setOtpSent(true);
-      setStep("otp");
-      setError("");
-    }, 1500);
+    setStep(2);
   };
 
-  const handleOtpSubmit = (e) => {
-    e.preventDefault();
+  const handleOTPSubmit = () => {
     setError("");
-
-    // Validate OTP (4 digits for demo)
-    if (otp.length !== 4 || !/^\d{4}$/.test(otp)) {
+    if (!otp.match(/^[0-9]{4}$/)) {
       setError("Please enter a valid 4-digit OTP");
       return;
     }
+    setStep(3);
+  };
 
-    // Simulate OTP verification
-    if (otp === "1234") {
-      setLoading(true);
-      setTimeout(() => {
-        setLoading(false);
-        setVerifiedPhone(phoneNumber);
-        setStep("role");
-        setError("");
-      }, 1500);
-    } else {
-      setError("Invalid OTP. Try 1234 for demo");
+  const handleRoleSubmit = async () => {
+    if (!selectedRole) {
+      setError("Please select a role to continue");
+      return;
+    }
+    
+    setLoading(true);
+    setError("");
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      login(phone, selectedRole);
+      navigate("/");
+    } catch (err) {
+      setError("Login failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRoleSelect = (roleId) => {
-    setSelectedRole(roleId);
-    setLoading(true);
-
-    // Simulate login
-    setTimeout(() => {
-      setLoading(false);
-      // Save user info to localStorage
-      const user = {
-        phone: verifiedPhone,
-        role: roleId,
-        loginTime: new Date().toISOString(),
-      };
-      localStorage.setItem("currentUser", JSON.stringify(user));
-
-      // Small delay to ensure localStorage is processed
-      setTimeout(() => {
-        navigate("/");
-      }, 100);
-    }, 1500);
-  };
-
-  const handleBackToPhone = () => {
-    setStep("phone");
-    setOtp("");
-    setOtpSent(false);
-    setError("");
-  };
-
-  const handleBackToOtp = () => {
-    setStep("otp");
-    setSelectedRole("");
-    setError("");
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-20 right-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 left-20 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
-      </div>
-
-      {/* Main Container */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="relative w-full max-w-md"
+        className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8"
       >
-        {/* Logo & Header */}
         <div className="text-center mb-8">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring" }}
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 mb-4 shadow-lg"
-          >
-            <span className="text-3xl">💰</span>
-          </motion.div>
-          <h1 className="text-3xl font-bold text-white mb-2">Geo Billing</h1>
-          <p className="text-slate-400">Smart Billing & Inventory System</p>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">
+            GEO BILLING
+          </h1>
+          <p className="text-gray-600 font-medium">Sign in to your account</p>
         </div>
 
-        {/* Card Container */}
-        <motion.div
-          key={step}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.4 }}
-          className="bg-slate-800/80 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-slate-700/50"
-        >
-          {/* PHONE STEP */}
-          {step === "phone" && (
-            <div className="space-y-6">
+        {step === 1 && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <div className="space-y-4">
               <div>
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  Enter Your Number
-                </h2>
-                <p className="text-slate-400 text-sm">
-                  We'll send you an OTP for verification
-                </p>
-              </div>
-
-              <form onSubmit={handlePhoneSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Phone Number
-                  </label>
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500" />
-                    <input
-                      type="tel"
-                      value={phoneNumber}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, 10);
-                        setPhoneNumber(value);
-                      }}
-                      placeholder="Enter 10-digit number"
-                      maxLength="10"
-                      className="w-full bg-slate-700/50 border border-slate-600 rounded-lg pl-12 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
-                    />
-                  </div>
-                  <p className="text-xs text-slate-500 mt-2">Format: 10 digits (e.g., 9876543210)</p>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Phone Number
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                  <input
+                    type="tel"
+                    maxLength="10"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Enter 10-digit phone number"
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
+                  />
                 </div>
+              </div>
 
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm"
-                  >
-                    {error}
-                  </motion.div>
-                )}
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit"
-                  disabled={loading || phoneNumber.length !== 10}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm font-medium"
                 >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                      Sending OTP...
-                    </>
-                  ) : (
-                    <>
-                      <Phone className="w-5 h-5" />
-                      Send OTP
-                    </>
-                  )}
-                </motion.button>
-              </form>
-
-              <div className="text-center text-slate-400 text-sm">
-                <p>Demo: Use any 10-digit number</p>
-              </div>
-            </div>
-          )}
-
-          {/* OTP STEP */}
-          {step === "otp" && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  Enter OTP
-                </h2>
-                <p className="text-slate-400 text-sm">
-                  We've sent an OTP to +91 {phoneNumber.slice(-10)}
-                </p>
-              </div>
-
-              <form onSubmit={handleOtpSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    OTP Code
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500" />
-                    <input
-                      type="text"
-                      value={otp}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, 4);
-                        setOtp(value);
-                      }}
-                      placeholder="Enter 4-digit OTP"
-                      maxLength="4"
-                      className="w-full bg-slate-700/50 border border-slate-600 rounded-lg pl-12 pr-4 py-3 text-white text-center text-2xl font-bold placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
-                    />
-                  </div>
-                  <p className="text-xs text-slate-500 mt-2">Demo OTP: 1234</p>
-                </div>
-
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm"
-                  >
-                    {error}
-                  </motion.div>
-                )}
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit"
-                  disabled={loading || otp.length !== 4}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                      Verifying OTP...
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="w-5 h-5" />
-                      Verify OTP
-                    </>
-                  )}
-                </motion.button>
-
-                <button
-                  type="button"
-                  onClick={handleBackToPhone}
-                  className="w-full text-slate-400 hover:text-slate-300 font-medium py-2 rounded-lg transition"
-                >
-                  ← Back to Phone
-                </button>
-              </form>
-
-              <div className="text-center text-slate-500 text-xs">
-                <p>Didn't receive OTP? <span className="text-blue-400 cursor-pointer hover:underline">Resend</span></p>
-              </div>
-            </div>
-          )}
-
-          {/* ROLE SELECTION STEP */}
-          {step === "role" && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  Select Your Role
-                </h2>
-                <p className="text-slate-400 text-sm">
-                  Choose your designation to continue
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {roles.map((role) => {
-                  const Icon = role.icon;
-                  const isSelected = selectedRole === role.id;
-
-                  return (
-                    <motion.button
-                      key={role.id}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleRoleSelect(role.id)}
-                      disabled={loading}
-                      className={`w-full p-4 rounded-xl transition-all duration-300 border-2 relative overflow-hidden group ${
-                        isSelected
-                          ? "border-blue-500 bg-gradient-to-r from-blue-500/20 to-purple-500/20"
-                          : "border-slate-600 bg-slate-700/30 hover:border-slate-500"
-                      }`}
-                    >
-                      {/* Background gradient on hover */}
-                      <div
-                        className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity ${role.color} bg-gradient-to-r`}
-                      ></div>
-
-                      <div className="relative flex items-start gap-4">
-                        <div
-                          className={`p-3 rounded-lg flex-shrink-0 ${
-                            isSelected
-                              ? `bg-gradient-to-br ${role.color}`
-                              : "bg-slate-600/50"
-                          }`}
-                        >
-                          <Icon className="w-6 h-6 text-white" />
-                        </div>
-
-                        <div className="flex-1 text-left">
-                          <p className="font-semibold text-white text-sm">
-                            {role.label}
-                          </p>
-                          <p className="text-xs text-slate-400 mt-1">
-                            {role.description}
-                          </p>
-                        </div>
-
-                        {isSelected && (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            className="flex-shrink-0 mt-1"
-                          >
-                            <CheckCircle2 className="w-5 h-5 text-blue-400" />
-                          </motion.div>
-                        )}
-                      </div>
-                    </motion.button>
-                  );
-                })}
-              </div>
+                  ⚠️ {error}
+                </motion.div>
+              )}
 
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => handleRoleSelect(selectedRole)}
-                disabled={loading || !selectedRole}
-                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
+                onClick={handlePhoneSubmit}
+                className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-lg transition-all"
               >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                    Logging in...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-5 h-5" />
-                    Continue as {selectedRole ? roles.find(r => r.id === selectedRole)?.label : "..."}
-                  </>
-                )}
+                Send OTP
               </motion.button>
-
-              <button
-                type="button"
-                onClick={handleBackToOtp}
-                className="w-full text-slate-400 hover:text-slate-300 font-medium py-2 rounded-lg transition"
-              >
-                ← Back to OTP
-              </button>
             </div>
-          )}
-        </motion.div>
+          </motion.div>
+        )}
 
-        {/* Footer */}
-        <div className="text-center mt-6">
-          <p className="text-slate-500 text-xs">
-            Protected by industry-standard encryption
-          </p>
+        {step === 2 && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Enter OTP
+                </label>
+                <p className="text-xs text-gray-500 mb-3">
+                  We've sent a 4-digit OTP to +91{phone}
+                </p>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    maxLength="4"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                    placeholder="0000"
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors text-2xl tracking-widest"
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm font-medium"
+                >
+                  ⚠️ {error}
+                </motion.div>
+              )}
+
+              <div className="flex gap-2">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setStep(1);
+                    setOtp("");
+                    setError("");
+                  }}
+                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg transition-all"
+                >
+                  Back
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleOTPSubmit}
+                  className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-lg transition-all"
+                >
+                  Verify OTP
+                </motion.button>
+              </div>
+
+              <p className="text-center text-xs text-gray-500">
+                Didn't receive? <span className="text-blue-600 font-semibold cursor-pointer">Resend OTP</span>
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {step === 3 && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 font-medium text-center mb-2">
+                Select your role to continue
+              </p>
+
+              <div className="space-y-3">
+                {roles.map((role) => (
+                  <motion.button
+                    key={role.id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setSelectedRole(role.id)}
+                    className={`w-full p-4 rounded-lg border-2 transition-all ${
+                      selectedRole === role.id
+                        ? "border-green-500 bg-gradient-to-r " + role.color + " text-white shadow-lg"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl mt-1">{role.icon}</span>
+                      <div className="text-left flex-1">
+                        <h3 className={`font-bold text-lg ${selectedRole === role.id ? "text-white" : ""}`}>
+                          {role.name}
+                        </h3>
+                        <p className={`text-sm ${selectedRole === role.id ? "text-green-100" : "text-gray-600"}`}>
+                          {role.description}
+                        </p>
+                        <p className={`text-xs mt-2 ${selectedRole === role.id ? "text-green-100 font-semibold" : "text-gray-500"}`}>
+                          {role.permissions}
+                        </p>
+                      </div>
+                      {selectedRole === role.id && (
+                        <CheckCircle className="w-6 h-6 text-white flex-shrink-0" />
+                      )}
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm font-medium"
+                >
+                  ⚠️ {error}
+                </motion.div>
+              )}
+
+              <div className="flex gap-2">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setStep(2);
+                    setSelectedRole(null);
+                    setError("");
+                  }}
+                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg transition-all"
+                >
+                  Back
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleRoleSubmit}
+                  disabled={loading}
+                  className="flex-1 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold rounded-lg transition-all disabled:opacity-50"
+                >
+                  {loading ? "Signing in..." : "Sign In"}
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="mt-8 pt-6 border-t border-gray-200 text-center text-xs text-gray-600">
+          <p>Demo credentials: Any 10-digit phone • OTP: 1234</p>
         </div>
       </motion.div>
     </div>

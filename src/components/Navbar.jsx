@@ -17,9 +17,11 @@ import {
   Bell,
   Trash2,
   CheckCheck,
+  LogOut,
 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { NotificationContext } from "../context/NotificationContext";
+import { useAuth } from "../context/AuthContext";
 
 function IconBtn({ icon: Icon, label, active, to, hasSubmenu, isOpen, onClick }) {
   return (
@@ -50,6 +52,8 @@ function IconBtn({ icon: Icon, label, active, to, hasSubmenu, isOpen, onClick })
 
 export default function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout, userRole } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [reportSubmenuOpen, setReportSubmenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -63,6 +67,11 @@ export default function Navbar() {
   } = useContext(NotificationContext);
 
   const isActive = (path) => location.pathname === path;
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   const getNotificationIcon = (type) => {
     switch (type) {
@@ -325,14 +334,23 @@ export default function Navbar() {
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center font-bold">
-                U
+                {user?.role === "ADMIN" ? "👨‍💼" : user?.role === "OWNER" ? "👔" : "💼"}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium">Admin User</p>
-                <p className="text-xs text-white/60">admin@billhub.com</p>
+                <p className="text-sm font-medium">{user?.role || "Guest"}</p>
+                <p className="text-xs text-white/60">+91 {user?.phone || "N/A"}</p>
               </div>
             </div>
           </motion.div>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-red-200 rounded-xl font-medium transition-all"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </motion.button>
         </motion.div>
       </aside>
 
