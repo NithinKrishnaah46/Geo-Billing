@@ -108,7 +108,7 @@ export default function Navbar() {
 
   const reportItems = [
     { label: "Analytics", icon: BarChart3, path: "/reports", roles: ["ADMIN", "OWNER"] },
-    { label: "Seller Reports", icon: TrendingUp, path: "/reports/sellers", roles: ["ADMIN"] },
+    { label: "Seller Reports", icon: TrendingUp, path: "/reports/sellers", roles: ["ADMIN", "OWNER"] },
     { label: "Stock Reports", icon: Package, path: "/reports/stock", roles: ["ADMIN", "OWNER"] },
     { label: "Transit Reports", icon: Truck, path: "/reports/transit", roles: ["ADMIN", "OWNER"] },
     { label: "Tax Reports", icon: Receipt, path: "/reports/tax", roles: ["ADMIN", "OWNER"] },
