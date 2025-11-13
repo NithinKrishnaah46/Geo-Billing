@@ -100,19 +100,23 @@ export default function Navbar() {
   };
 
   const navItems = [
-    { label: "Dashboard", icon: Home, path: "/" },
-    { label: "POS Billing", icon: ShoppingCart, path: "/pos" },
-    { label: "Inventory", icon: Box, path: "/inventory" },
-    { label: "Customers", icon: Users, path: "/customers" },
+    { label: "Dashboard", icon: Home, path: "/", roles: ["ADMIN", "OWNER", "SALES_EXECUTIVE"] },
+    { label: "POS Billing", icon: ShoppingCart, path: "/pos", roles: ["ADMIN", "SALES_EXECUTIVE"] },
+    { label: "Inventory", icon: Box, path: "/inventory", roles: ["ADMIN", "OWNER", "SALES_EXECUTIVE"] },
+    { label: "Customers", icon: Users, path: "/customers", roles: ["ADMIN", "OWNER", "SALES_EXECUTIVE"] },
   ];
 
   const reportItems = [
-    { label: "Analytics", icon: BarChart3, path: "/reports" },
-    { label: "Seller Reports", icon: TrendingUp, path: "/reports/sellers" },
-    { label: "Stock Reports", icon: Package, path: "/reports/stock" },
-    { label: "Transit Reports", icon: Truck, path: "/reports/transit" },
-    { label: "Tax Reports", icon: Receipt, path: "/reports/tax" },
+    { label: "Analytics", icon: BarChart3, path: "/reports", roles: ["ADMIN"] },
+    { label: "Seller Reports", icon: TrendingUp, path: "/reports/sellers", roles: ["ADMIN"] },
+    { label: "Stock Reports", icon: Package, path: "/reports/stock", roles: ["ADMIN", "OWNER"] },
+    { label: "Transit Reports", icon: Truck, path: "/reports/transit", roles: ["ADMIN", "OWNER"] },
+    { label: "Tax Reports", icon: Receipt, path: "/reports/tax", roles: ["ADMIN", "OWNER"] },
   ];
+
+  // Filter items based on user role
+  const visibleNavItems = navItems.filter(item => item.roles.includes(userRole));
+  const visibleReportItems = reportItems.filter(item => item.roles.includes(userRole));
 
   return (
     <>
@@ -245,7 +249,7 @@ export default function Navbar() {
           )}
         </motion.div>
         <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-          {navItems.map((item, idx) => (
+          {visibleNavItems.map((item, idx) => (
             <motion.div
               key={item.path}
               initial={{ x: -20, opacity: 0 }}
@@ -261,59 +265,61 @@ export default function Navbar() {
             </motion.div>
           ))}
 
-          {/* Reports Submenu */}
-          <motion.div
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: navItems.length * 0.05 }}
-          >
-            <button
-              onClick={() => setReportSubmenuOpen(!reportSubmenuOpen)}
-              className="w-full text-left"
-            >
-              <IconBtn
-                icon={BarChart3}
-                label="Reports"
-                active={location.pathname.startsWith("/reports")}
-                hasSubmenu={true}
-                isOpen={reportSubmenuOpen}
-              />
-            </button>
-
-            {/* Submenu Items */}
+          {/* Reports Submenu - Only show if user has access to any report */}
+          {visibleReportItems.length > 0 && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{
-                opacity: reportSubmenuOpen ? 1 : 0,
-                height: reportSubmenuOpen ? "auto" : 0,
-              }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden mt-1 ml-4 space-y-1 border-l border-white/10 pl-3"
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: visibleNavItems.length * 0.05 }}
             >
-              {reportItems.map((item, idx) => (
-                <motion.div
-                  key={item.path}
-                  initial={{ x: -10, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: idx * 0.05 }}
-                >
-                  <Link to={item.path}>
-                    <motion.div
-                      whileHover={{ x: 5 }}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm ${
-                        isActive(item.path)
-                          ? "bg-white/15 text-white shadow-lg"
-                          : "text-white/60 hover:text-white/90 hover:bg-white/5"
-                      }`}
-                    >
-                      <item.icon className="w-4 h-4 flex-shrink-0" />
-                      <span className="truncate font-medium">{item.label}</span>
-                    </motion.div>
-                  </Link>
-                </motion.div>
-              ))}
+              <button
+                onClick={() => setReportSubmenuOpen(!reportSubmenuOpen)}
+                className="w-full text-left"
+              >
+                <IconBtn
+                  icon={BarChart3}
+                  label="Reports"
+                  active={location.pathname.startsWith("/reports")}
+                  hasSubmenu={true}
+                  isOpen={reportSubmenuOpen}
+                />
+              </button>
+
+              {/* Submenu Items */}
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{
+                  opacity: reportSubmenuOpen ? 1 : 0,
+                  height: reportSubmenuOpen ? "auto" : 0,
+                }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden mt-1 ml-4 space-y-1 border-l border-white/10 pl-3"
+              >
+                {visibleReportItems.map((item, idx) => (
+                  <motion.div
+                    key={item.path}
+                    initial={{ x: -10, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: idx * 0.05 }}
+                  >
+                    <Link to={item.path}>
+                      <motion.div
+                        whileHover={{ x: 5 }}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm ${
+                          isActive(item.path)
+                            ? "bg-white/15 text-white shadow-lg"
+                            : "text-white/60 hover:text-white/90 hover:bg-white/5"
+                        }`}
+                      >
+                        <item.icon className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate font-medium">{item.label}</span>
+                      </motion.div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </motion.div>
             </motion.div>
-          </motion.div>
+          )}
         </nav>
 
         {/* Settings & Profile */}
@@ -479,7 +485,7 @@ export default function Navbar() {
           animate={{ opacity: 1, y: 0 }}
           className="md:hidden fixed top-16 left-0 right-0 bg-dark-sidebar text-white border-b border-white/5 p-4 space-y-2 z-40 max-h-96 overflow-y-auto"
         >
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <IconBtn
               key={item.path}
               icon={item.icon}
@@ -489,42 +495,46 @@ export default function Navbar() {
             />
           ))}
 
-          {/* Mobile Reports Submenu */}
-          <button
-            onClick={() => setReportSubmenuOpen(!reportSubmenuOpen)}
-            className="w-full text-left"
-          >
-            <IconBtn
-              icon={BarChart3}
-              label="Reports"
-              active={location.pathname.startsWith("/reports")}
-              hasSubmenu={true}
-              isOpen={reportSubmenuOpen}
-            />
-          </button>
+          {/* Mobile Reports Submenu - Only show if user has access */}
+          {visibleReportItems.length > 0 && (
+            <>
+              <button
+                onClick={() => setReportSubmenuOpen(!reportSubmenuOpen)}
+                className="w-full text-left"
+              >
+                <IconBtn
+                  icon={BarChart3}
+                  label="Reports"
+                  active={location.pathname.startsWith("/reports")}
+                  hasSubmenu={true}
+                  isOpen={reportSubmenuOpen}
+                />
+              </button>
 
-          {reportSubmenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              className="ml-4 space-y-1 border-l border-white/10 pl-3"
-            >
-              {reportItems.map((item) => (
-                <Link key={item.path} to={item.path}>
-                  <motion.div
-                    whileHover={{ x: 5 }}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm ${
-                      isActive(item.path)
-                        ? "bg-white/15 text-white shadow-lg"
-                        : "text-white/60 hover:text-white/90 hover:bg-white/5"
-                    }`}
-                  >
-                    <item.icon className="w-4 h-4 flex-shrink-0" />
-                    <span className="truncate font-medium">{item.label}</span>
-                  </motion.div>
-                </Link>
-              ))}
-            </motion.div>
+              {reportSubmenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="ml-4 space-y-1 border-l border-white/10 pl-3"
+                >
+                  {visibleReportItems.map((item) => (
+                    <Link key={item.path} to={item.path}>
+                      <motion.div
+                        whileHover={{ x: 5 }}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm ${
+                          isActive(item.path)
+                            ? "bg-white/15 text-white shadow-lg"
+                            : "text-white/60 hover:text-white/90 hover:bg-white/5"
+                        }`}
+                      >
+                        <item.icon className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate font-medium">{item.label}</span>
+                      </motion.div>
+                    </Link>
+                  ))}
+                </motion.div>
+              )}
+            </>
           )}
         </motion.div>
       )}

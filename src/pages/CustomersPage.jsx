@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import * as XLSX from "xlsx";
+import { useAuth } from "../context/AuthContext";
 // eslint-disable-next-line no-unused-vars
-import { Plus, Edit2, Trash2, Search, Mail, Phone, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, Mail, Phone, CheckCircle, Clock, AlertCircle, Download, Upload } from "lucide-react";
 
 const SAMPLE_CUSTOMERS = [
   { id: "c1", name: "Ravi Kumar", email: "ravi@email.com", phone: "+91 98765 43210", spent: "₹25,000", joined: "2024-01-15", billStatus: "Paid", totalBills: "₹25,000", pendingAmount: "₹0" },
@@ -12,6 +14,7 @@ const SAMPLE_CUSTOMERS = [
 ];
 
 export default function CustomersPage() {
+  const { userRole } = useAuth();
   const [customers, setCustomers] = useState(() => {
     const saved = localStorage.getItem("customers");
     return saved ? JSON.parse(saved) : SAMPLE_CUSTOMERS;
@@ -21,6 +24,7 @@ export default function CustomersPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [successModal, setSuccessModal] = useState(null);
   const [newCustomer, setNewCustomer] = useState({
     name: "",
     email: "",
@@ -130,6 +134,102 @@ export default function CustomersPage() {
     }
   }
 
+  const exportCustomersToCSV = () => {
+    try {
+      const data = customers.map(c => ({
+        ID: c.id,
+        Name: c.name,
+        Email: c.email,
+        Phone: c.phone,
+        Spent: c.spent,
+        "Joined Date": c.joined,
+        "Bill Status": c.billStatus,
+        "Total Bills": c.totalBills,
+        "Pending Amount": c.pendingAmount,
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Customers");
+      
+      // Set column widths
+      worksheet["!cols"] = [
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 25 },
+        { wch: 18 },
+        { wch: 12 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+      ];
+
+      const timestamp = new Date().toISOString().split("T")[0];
+      XLSX.writeFile(workbook, `customers_${timestamp}.xlsx`);
+      
+      setSuccessModal({ type: "export", count: customers.length });
+      setTimeout(() => setSuccessModal(null), 4000);
+    } catch (error) {
+      showNotification("❌ Error exporting customers to CSV", "error");
+      console.error("Export error:", error);
+    }
+  };
+
+  const importCustomersFromCSV = (event) => {
+    try {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        if (jsonData.length === 0) {
+          showNotification("⚠️ CSV file is empty", "error");
+          return;
+        }
+
+        const importedCustomers = jsonData.map(row => ({
+          id: row.ID || `c${Date.now()}_${Math.random()}`,
+          name: row.Name || "",
+          email: row.Email || "",
+          phone: row.Phone || "",
+          spent: row.Spent || "₹0",
+          joined: row["Joined Date"] || new Date().toISOString().split("T")[0],
+          billStatus: row["Bill Status"] || "Pending",
+          totalBills: row["Total Bills"] || "₹0",
+          pendingAmount: row["Pending Amount"] || "₹0",
+        }));
+
+        // Filter out invalid entries
+        const validCustomers = importedCustomers.filter(c => c.name && c.email && c.phone);
+        
+        if (validCustomers.length === 0) {
+          showNotification("⚠️ No valid customers found in CSV file", "error");
+          return;
+        }
+
+        // Merge with existing (avoid duplicates by ID)
+        const existingIds = new Set(customers.map(c => c.id));
+        const newCustomers = validCustomers.filter(c => !existingIds.has(c.id));
+        
+        setCustomers([...customers, ...newCustomers]);
+        setSuccessModal({ type: "import", count: newCustomers.length });
+        setTimeout(() => setSuccessModal(null), 4000);
+      };
+      
+      reader.readAsArrayBuffer(file);
+      event.target.value = "";
+    } catch (error) {
+      showNotification("❌ Error importing customers from CSV", "error");
+      console.error("Import error:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-light p-4 md:p-8">
       <motion.div
@@ -137,20 +237,49 @@ export default function CustomersPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-4xl font-bold text-gray-900">Customers</h1>
             <p className="text-gray-600 mt-2">Manage your customer relationships</p>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowAddModal(true)}
-            className="hidden md:flex items-center gap-2 px-6 py-3 bg-gradient-primary text-white rounded-xl font-bold hover:shadow-lg transition-shadow"
-          >
-            <Plus className="w-5 h-5" />
-            Add Customer
-          </motion.button>
+          <div className="flex items-center gap-3 flex-wrap">
+            {userRole !== "SALES_EXECUTIVE" && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowAddModal(true)}
+                className="hidden md:flex items-center gap-2 px-6 py-3 bg-gradient-primary text-white rounded-xl font-bold hover:shadow-lg transition-shadow"
+              >
+                <Plus className="w-5 h-5" />
+                Add Customer
+              </motion.button>
+            )}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={exportCustomersToCSV}
+              className="hidden md:flex items-center gap-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold transition-shadow hover:shadow-lg"
+            >
+              <Download className="w-5 h-5" />
+              Export CSV
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="hidden md:flex items-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold transition-shadow hover:shadow-lg cursor-pointer"
+              onClick={() => document.getElementById("csv-import-input").click()}
+            >
+              <Upload className="w-5 h-5" />
+              Import CSV
+            </motion.button>
+            <input
+              id="csv-import-input"
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={importCustomersFromCSV}
+              className="hidden"
+            />
+          </div>
         </div>
       </motion.div>
 
@@ -198,24 +327,26 @@ export default function CustomersPage() {
                     </motion.div>
                   );
                 })()}
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setEditing(customer)}
-                    className="p-2 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => deleteCustomer(customer.id)}
-                    className="p-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </motion.button>
-                </div>
+                {userRole !== "SALES_EXECUTIVE" && (
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setEditing(customer)}
+                      className="p-2 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => deleteCustomer(customer.id)}
+                      className="p-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </motion.button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -253,7 +384,7 @@ export default function CustomersPage() {
       </div>
 
       {/* Edit Modal */}
-      {editing && (
+      {editing && userRole !== "SALES_EXECUTIVE" && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -351,7 +482,7 @@ export default function CustomersPage() {
       )}
 
       {/* Add Customer Modal */}
-      {showAddModal && (
+      {showAddModal && userRole !== "SALES_EXECUTIVE" && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -573,6 +704,50 @@ export default function CustomersPage() {
               className="text-gray-600 text-lg"
             >
               Customer has been removed from your database
+            </motion.p>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Success Modal for Export/Import */}
+      {successModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 100, damping: 15 }}
+            className="bg-white rounded-3xl p-12 shadow-2xl text-center max-w-sm w-full mx-4"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
+              className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6"
+            >
+              <CheckCircle className="w-16 h-16 text-green-600" strokeWidth={1.5} />
+            </motion.div>
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-3xl font-bold text-gray-900 mb-2"
+            >
+              {successModal.type === "export" ? "Exported Successfully" : "Imported Successfully"}
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="text-gray-600 text-lg"
+            >
+              {successModal.type === "export"
+                ? `Successfully exported ${successModal.count} customers to CSV file`
+                : `Successfully imported ${successModal.count} customers from CSV file`}
             </motion.p>
           </motion.div>
         </motion.div>
