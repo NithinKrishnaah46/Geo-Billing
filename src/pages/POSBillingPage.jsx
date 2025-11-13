@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
+import { NotificationContext } from "../context/NotificationContext";
 // eslint-disable-next-line no-unused-vars
 import { Search, Barcode, Plus, Minus, Trash2, Phone, Mail, FileText, Printer, Save, Send, MessageSquare, X, CheckCircle2, Download, Share2 } from "lucide-react";
 
@@ -46,6 +47,7 @@ export default function POSBillingPage() {
   const [cardCVV, setCardCVV] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [upiId, setUpiId] = useState("");
+  const { addNotification } = useContext(NotificationContext);
 
   // Initialize selected customer on first load
   useEffect(() => {
@@ -84,6 +86,14 @@ export default function POSBillingPage() {
       setProducts([...products, product]);
       setNewProduct({ name: "", price: "", sku: "", stock: "" });
       setShowAddProductModal(false);
+      
+      // Add notification to context
+      addNotification(
+        "product",
+        "Product Added",
+        `${product.name} (SKU: ${product.sku}) added with stock: ${product.stock}`
+      );
+      
       setNotification({ type: "product", message: "Product added successfully" });
       setTimeout(() => setNotification(null), 3000);
     } else {
@@ -104,6 +114,14 @@ export default function POSBillingPage() {
       setSelectedCustomer(customer);
       setNewCustomer({ name: "", phone: "", email: "", gst: "" });
       setShowAddCustomerModal(false);
+      
+      // Add notification to context
+      addNotification(
+        "product",
+        "New Customer Added",
+        `${customer.name} (${customer.phone}) added to customer list`
+      );
+      
       setNotification({ type: "customer", message: "Customer added successfully" });
       setTimeout(() => setNotification(null), 3000);
     } else {
@@ -146,6 +164,13 @@ export default function POSBillingPage() {
     const savedInvoices = JSON.parse(localStorage.getItem("invoices") || "[]");
     savedInvoices.push(invoiceData);
     localStorage.setItem("invoices", JSON.stringify(savedInvoices));
+    
+    // Add notification to context
+    addNotification(
+      "sale",
+      "Invoice Saved",
+      `Invoice #${invoiceNo} saved for ${selectedCustomer.name} - ₹${total.toFixed(2)}`
+    );
     
     setNotification({ type: "save", message: "Invoice saved successfully" });
     setTimeout(() => setNotification(null), 3000);
@@ -238,6 +263,14 @@ export default function POSBillingPage() {
       return;
     }
     const change = amount - total;
+    
+    // Add notification to context
+    addNotification(
+      "sale",
+      "Cash Payment Received",
+      `Payment of ₹${total.toFixed(2)} received from ${selectedCustomer?.name || "Customer"} - Change: ₹${change.toFixed(2)}`
+    );
+    
     setNotification({ type: "cash_success", message: `Payment successful! Change: ₹${change}` });
     setTimeout(() => {
       setNotification(null);
@@ -260,6 +293,14 @@ export default function POSBillingPage() {
       alert("⚠️ CVV must be 3 digits");
       return;
     }
+    
+    // Add notification to context
+    addNotification(
+      "sale",
+      "Card Payment Received",
+      `Payment of ₹${total.toFixed(2)} received from ${selectedCustomer?.name || "Customer"} - Card ending in ${cardNumber.slice(-4)}`
+    );
+    
     setNotification({ type: "card_success", message: `Payment successful! Card ending in ${cardNumber.slice(-4)}` });
     setTimeout(() => {
       setNotification(null);
@@ -276,6 +317,14 @@ export default function POSBillingPage() {
       alert("⚠️ Please enter your UPI ID or scan QR code");
       return;
     }
+    
+    // Add notification to context
+    addNotification(
+      "sale",
+      "UPI Payment Received",
+      `Payment of ₹${total.toFixed(2)} received from ${selectedCustomer?.name || "Customer"} - UPI: ${upiId}`
+    );
+    
     setNotification({ type: "upi_success", message: `Payment successful! UPI: ${upiId}` });
     setTimeout(() => {
       setNotification(null);

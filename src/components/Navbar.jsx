@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { motion } from "framer-motion";
 import {
   ShoppingCart,
@@ -14,8 +14,12 @@ import {
   Package,
   ChevronDown,
   Receipt,
+  Bell,
+  Trash2,
+  CheckCheck,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { NotificationContext } from "../context/NotificationContext";
 
 function IconBtn({ icon: Icon, label, active, to, hasSubmenu, isOpen, onClick }) {
   return (
@@ -48,8 +52,43 @@ export default function Navbar() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [reportSubmenuOpen, setReportSubmenuOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const {
+    notifications,
+    markAsRead,
+    markAllAsRead,
+    clearNotification,
+    clearAllNotifications,
+    unreadCount,
+  } = useContext(NotificationContext);
 
   const isActive = (path) => location.pathname === path;
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case "sale":
+        return "🛍️";
+      case "product":
+        return "📦";
+      case "transit":
+        return "🚚";
+      default:
+        return "📢";
+    }
+  };
+
+  const formatTime = (timestamp) => {
+    const now = new Date();
+    const diff = now - new Date(timestamp);
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
 
   const navItems = [
     { label: "Dashboard", icon: Home, path: "/" },
@@ -87,7 +126,101 @@ export default function Navbar() {
           </div>
         </motion.div>
 
-        {/* Navigation */}
+        {/* Notifications Panel */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative border-b border-white/10 p-4"
+        >
+          <button
+            onClick={() => setNotificationOpen(!notificationOpen)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/15 transition-colors relative"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Notification Dropdown */}
+          {notificationOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="absolute left-4 right-4 top-full mt-2 bg-dark-sidebar border border-white/10 rounded-xl shadow-2xl max-h-96 overflow-y-auto z-50"
+            >
+              {notifications.length === 0 ? (
+                <div className="p-8 text-center text-white/60">
+                  <Bell className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">No notifications yet</p>
+                </div>
+              ) : (
+                <>
+                  {/* Notification List */}
+                  <div className="divide-y divide-white/5">
+                    {notifications.map((notif) => (
+                      <motion.div
+                        key={notif.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className={`p-4 cursor-pointer hover:bg-white/5 transition-colors ${
+                          !notif.read ? "bg-white/5" : ""
+                        }`}
+                        onClick={() => markAsRead(notif.id)}
+                      >
+                        <div className="flex gap-3">
+                          <span className="text-xl flex-shrink-0">
+                            {getNotificationIcon(notif.type)}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-white truncate">
+                              {notif.title}
+                            </p>
+                            <p className="text-xs text-white/60 line-clamp-2 mt-1">
+                              {notif.message}
+                            </p>
+                            <p className="text-xs text-white/40 mt-2">
+                              {formatTime(notif.timestamp)}
+                            </p>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              clearNotification(notif.id);
+                            }}
+                            className="text-white/40 hover:text-white/70 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="border-t border-white/5 p-3 flex gap-2">
+                    <button
+                      onClick={() => markAllAsRead()}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                    >
+                      <CheckCheck className="w-4 h-4" />
+                      Mark all read
+                    </button>
+                    <button
+                      onClick={() => clearAllNotifications()}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Clear all
+                    </button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          )}
+        </motion.div>
         <nav className="flex-1 overflow-y-auto p-4 space-y-2">
           {navItems.map((item, idx) => (
             <motion.div
@@ -197,13 +330,101 @@ export default function Navbar() {
           </div>
           <span className="font-bold">Geo Billing</span>
         </div>
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-        >
-          {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setNotificationOpen(!notificationOpen)}
+            className="relative p-2 hover:bg-white/10 rounded-lg transition-colors"
+          >
+            <Bell size={20} />
+            {unreadCount > 0 && (
+              <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+          >
+            {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile Notifications Panel */}
+      {notificationOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="md:hidden fixed top-16 left-0 right-0 bg-dark-sidebar text-white border-b border-white/5 max-h-96 overflow-y-auto z-40"
+        >
+          {notifications.length === 0 ? (
+            <div className="p-8 text-center text-white/60">
+              <Bell className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">No notifications yet</p>
+            </div>
+          ) : (
+            <>
+              <div className="divide-y divide-white/5">
+                {notifications.map((notif) => (
+                  <motion.div
+                    key={notif.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`p-4 cursor-pointer hover:bg-white/5 transition-colors ${
+                      !notif.read ? "bg-white/5" : ""
+                    }`}
+                    onClick={() => markAsRead(notif.id)}
+                  >
+                    <div className="flex gap-3">
+                      <span className="text-xl flex-shrink-0">
+                        {getNotificationIcon(notif.type)}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">
+                          {notif.title}
+                        </p>
+                        <p className="text-xs text-white/60 line-clamp-2 mt-1">
+                          {notif.message}
+                        </p>
+                        <p className="text-xs text-white/40 mt-2">
+                          {formatTime(notif.timestamp)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          clearNotification(notif.id);
+                        }}
+                        className="text-white/40 hover:text-white/70 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="border-t border-white/5 p-3 flex gap-2">
+                <button
+                  onClick={() => markAllAsRead()}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                >
+                  <CheckCheck className="w-4 h-4" />
+                  Mark all read
+                </button>
+                <button
+                  onClick={() => clearAllNotifications()}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Clear all
+                </button>
+              </div>
+            </>
+          )}
+        </motion.div>
+      )}
 
       {/* Mobile Menu */}
       {mobileOpen && (
