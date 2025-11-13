@@ -188,18 +188,41 @@ export default function POSBillingPage() {
         <head>
           <title>Invoice #${invoiceNo}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h1 { text-align: center; }
+            body { font-family: Arial, sans-serif; padding: 20px; margin: 0; }
+            .store-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+            .store-name { font-size: 24px; font-weight: bold; margin: 0; }
+            .store-details { font-size: 12px; color: #666; margin: 5px 0; }
+            .invoice-title { text-align: center; font-size: 18px; font-weight: bold; margin: 20px 0; }
+            h1 { text-align: center; margin: 0 0 10px 0; }
             table { width: 100%; border-collapse: collapse; margin: 20px 0; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
             th { background-color: #f2f2f2; }
-            .summary { margin-top: 20px; }
+            .summary { margin-top: 20px; text-align: right; }
+            .customer-info { margin-bottom: 20px; }
+            .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 20px; }
           </style>
         </head>
         <body>
-          <h1>Invoice #${invoiceNo}</h1>
-          <p><strong>Customer:</strong> ${selectedCustomer.name}</p>
-          <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+          <!-- Store Header -->
+          <div class="store-header">
+            <div class="store-name">GEO BILLING</div>
+            <div class="store-details">123 Main Street, Business District</div>
+            <div class="store-details">Phone: +91 98765 43210</div>
+          </div>
+          
+          <!-- Invoice Title -->
+          <div class="invoice-title">INVOICE</div>
+          <h1>#${invoiceNo}</h1>
+          
+          <!-- Date and Customer Info -->
+          <div class="customer-info">
+            <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+            <p><strong>Customer:</strong> ${selectedCustomer.name}</p>
+            <p><strong>Phone:</strong> ${selectedCustomer.phone}</p>
+            ${selectedCustomer.gst && selectedCustomer.gst !== "N/A" ? `<p><strong>GST:</strong> ${selectedCustomer.gst}</p>` : ""}
+          </div>
+          
+          <!-- Items Table -->
           <table>
             <tr>
               <th>Product</th>
@@ -216,11 +239,20 @@ export default function POSBillingPage() {
               </tr>
             `).join("")}
           </table>
+          
+          <!-- Summary -->
           <div class="summary">
-            <p><strong>Subtotal:</strong> ₹${subtotal}</p>
-            <p><strong>CGST (9%):</strong> ₹${cgst}</p>
-            <p><strong>SGST (9%):</strong> ₹${sgst}</p>
-            <h3><strong>Total:</strong> ₹${total}</h3>
+            <p><strong>Subtotal:</strong> ₹${subtotal.toFixed(2)}</p>
+            <p><strong>CGST (9%):</strong> ₹${cgst.toFixed(2)}</p>
+            <p><strong>SGST (9%):</strong> ₹${sgst.toFixed(2)}</p>
+            <h3><strong>Total Amount:</strong> ₹${total.toFixed(2)}</h3>
+            <p><strong>Payment Mode:</strong> ${paymentMode.toUpperCase()}</p>
+          </div>
+          
+          <!-- Footer -->
+          <div class="footer">
+            <p>Thank you for your business!</p>
+            <p>Please retain this invoice for your records</p>
           </div>
         </body>
       </html>
