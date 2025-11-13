@@ -98,8 +98,10 @@ export default function LoginPage() {
       };
       localStorage.setItem("currentUser", JSON.stringify(user));
 
-      // Redirect based on role
-      navigate("/");
+      // Small delay to ensure localStorage is processed
+      setTimeout(() => {
+        navigate("/");
+      }, 100);
     }, 1500);
   };
 

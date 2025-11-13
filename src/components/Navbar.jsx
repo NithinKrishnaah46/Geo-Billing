@@ -17,9 +17,8 @@ import {
   Bell,
   Trash2,
   CheckCheck,
-  LogOut,
 } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { NotificationContext } from "../context/NotificationContext";
 
 function IconBtn({ icon: Icon, label, active, to, hasSubmenu, isOpen, onClick }) {
@@ -51,7 +50,6 @@ function IconBtn({ icon: Icon, label, active, to, hasSubmenu, isOpen, onClick })
 
 export default function Navbar() {
   const location = useLocation();
-  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [reportSubmenuOpen, setReportSubmenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -64,41 +62,7 @@ export default function Navbar() {
     unreadCount,
   } = useContext(NotificationContext);
 
-  // Get current user
-  const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
-
   const isActive = (path) => location.pathname === path;
-
-  const handleLogout = () => {
-    localStorage.removeItem("currentUser");
-    navigate("/login");
-  };
-
-  const getRoleBadgeColor = (role) => {
-    switch (role) {
-      case "sales":
-        return "bg-blue-500/20 text-blue-300";
-      case "admin":
-        return "bg-purple-500/20 text-purple-300";
-      case "owner":
-        return "bg-green-500/20 text-green-300";
-      default:
-        return "bg-slate-500/20 text-slate-300";
-    }
-  };
-
-  const getRoleLabel = (role) => {
-    switch (role) {
-      case "sales":
-        return "Sales Executive";
-      case "admin":
-        return "Admin";
-      case "owner":
-        return "Owner";
-      default:
-        return "User";
-    }
-  };
 
   const getNotificationIcon = (type) => {
     switch (type) {
@@ -355,35 +319,20 @@ export default function Navbar() {
             active={isActive("/settings")}
             to="/settings"
           />
-          {currentUser && (
-            <>
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center font-bold text-sm">
-                    {currentUser.phone.slice(-2).toUpperCase()}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{currentUser.phone}</p>
-                    <div className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${getRoleBadgeColor(currentUser.role)}`}>
-                      {getRoleLabel(currentUser.role)}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-red-500/20 transition-colors border border-red-500/20 hover:border-red-500/40"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="font-medium text-sm">Logout</span>
-              </motion.button>
-            </>
-          )}
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            className="p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center font-bold">
+                U
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">Admin User</p>
+                <p className="text-xs text-white/60">admin@billhub.com</p>
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
       </aside>
 
