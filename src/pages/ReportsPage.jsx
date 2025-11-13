@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Calendar, Download, TrendingUp, DollarSign, ShoppingCart, Users, Zap, Target } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import * as XLSX from "xlsx";
+import { useExportSuccess } from "../context/ExportSuccessContext";
 
 const CHART_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -32,6 +33,7 @@ const topProducts = [
 export default function ReportsPage() {
   const [dateRange, setDateRange] = useState("month");
   const [chartType, setChartType] = useState("line");
+  const exportSuccess = useExportSuccess();
 
   const reports = [
     { id: 1, title: "Total Revenue", icon: DollarSign, color: "bg-gradient-primary", value: "₹4,56,72,200", change: "+18%", trend: "up" },
@@ -75,7 +77,7 @@ export default function ReportsPage() {
       XLSX.utils.book_append_sheet(workbook, summarySheet, "Reports Summary");
       
       XLSX.writeFile(workbook, `reports_${new Date().toISOString().split('T')[0]}.xlsx`);
-      alert("✅ Reports exported successfully!");
+      try { exportSuccess.showExportSuccess("Reports exported successfully"); } catch (e) {}
     } catch (error) {
       alert("⚠️ Error exporting file: " + error.message);
     }

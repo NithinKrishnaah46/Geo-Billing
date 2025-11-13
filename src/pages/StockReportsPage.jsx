@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { AlertTriangle, TrendingDown, Package, Warehouse, Download } from "lucide-react";
+import { AlertTriangle, TrendingDown, Package, Warehouse, Download, Edit2, Trash2, Plus } from "lucide-react";
 import * as XLSX from "xlsx";
+import { useExportSuccess } from "../context/ExportSuccessContext";
+import { useAuth } from "../context/AuthContext";
 
 const stockDetails = [
   { id: 1, product: "Paneer Butter Masala", sku: "SKU-2024-001", warehouse: "Main Warehouse", currentStock: 245, minLevel: 50, maxLevel: 500, status: "In Stock", location: "Rack A-12", lastUpdated: "2 hours ago", turnoverRate: "18.2/month", unitPrice: 280, totalValue: 68600 },
@@ -13,9 +15,21 @@ const stockDetails = [
 ];
 
 export default function StockReportsPage() {
+  const exportSuccess = useExportSuccess();
+  const { userRole } = useAuth();
+  const [stockDetails, setStockDetails] = useState([
+    { id: 1, product: "Paneer Butter Masala", sku: "SKU-2024-001", warehouse: "Main Warehouse", currentStock: 245, minLevel: 50, maxLevel: 500, status: "In Stock", location: "Rack A-12", lastUpdated: "2 hours ago", turnoverRate: "18.2/month", unitPrice: 280, totalValue: 68600 },
+    { id: 2, product: "Chicken Tikka Masala", sku: "SKU-2024-002", warehouse: "Main Warehouse", currentStock: 178, minLevel: 40, maxLevel: 400, status: "In Stock", location: "Rack B-08", lastUpdated: "45 min ago", turnoverRate: "14.8/month", unitPrice: 320, totalValue: 56960 },
+    { id: 3, product: "Butter Naan", sku: "SKU-2024-005", warehouse: "Cold Storage", currentStock: 28, minLevel: 60, maxLevel: 300, status: "Low Stock", location: "Cold-02", lastUpdated: "12 hours ago", turnoverRate: "25.5/month", unitPrice: 120, totalValue: 3360 },
+    { id: 4, product: "Dal Tadka", sku: "SKU-2024-004", warehouse: "Main Warehouse", currentStock: 156, minLevel: 35, maxLevel: 350, status: "In Stock", location: "Rack C-15", lastUpdated: "1 hour ago", turnoverRate: "13.6/month", unitPrice: 150, totalValue: 23400 },
+    { id: 5, product: "Vegetable Biryani", sku: "SKU-2024-006", warehouse: "Main Warehouse", currentStock: 8, minLevel: 25, maxLevel: 200, status: "Critical", location: "Rack D-03", lastUpdated: "3 hours ago", turnoverRate: "16.2/month", unitPrice: 280, totalValue: 2240 },
+    { id: 6, product: "Chicken Biryani", sku: "SKU-2024-007", warehouse: "Main Warehouse", currentStock: 92, minLevel: 30, maxLevel: 250, status: "In Stock", location: "Rack D-05", lastUpdated: "30 min ago", turnoverRate: "21.3/month", unitPrice: 350, totalValue: 32200 },
+  ]);
   const [expandedStock, setExpandedStock] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
   const [sortBy, setSortBy] = useState("value");
+  const [editing, setEditing] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const filteredStock = stockDetails
     .filter((stock) => filterStatus === "all" || stock.status === filterStatus)
@@ -29,6 +43,15 @@ export default function StockReportsPage() {
   const totalInventoryValue = stockDetails.reduce((acc, s) => acc + s.totalValue, 0);
   const lowStockCount = stockDetails.filter(s => s.status === "Low Stock" || s.status === "Critical").length;
   const totalUnits = stockDetails.reduce((acc, s) => acc + s.currentStock, 0);
+
+  function deleteStock(id) {
+    setStockDetails(stockDetails.filter(s => s.id !== id));
+  }
+
+  function saveStock(updated) {
+    setStockDetails(stockDetails.map(s => (s.id === updated.id ? updated : s)));
+    setEditing(null);
+  }
 
   // Export Stock Report to Excel
   function handleExportStock() {
@@ -63,9 +86,9 @@ export default function StockReportsPage() {
       XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
       
       XLSX.writeFile(workbook, `stock_reports_${new Date().toISOString().split('T')[0]}.xlsx`);
-      alert("✅ Warehouse & Stock reports exported successfully!");
+      exportSuccess.showExportSuccess("Warehouse & Stock reports exported successfully!");
     } catch (error) {
-      alert("⚠️ Error exporting file: " + error.message);
+      exportSuccess.showExportSuccess("Error exporting file: " + error.message);
     }
   }
 
@@ -187,6 +210,17 @@ export default function StockReportsPage() {
           <Download className="w-5 h-5" />
           Export Report
         </motion.button>
+        {(userRole === "ADMIN" || userRole === "OWNER") && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowAddModal(true)}
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Add Stock
+          </motion.button>
+        )}
       </motion.div>
 
       {/* Stock Details Table */}
@@ -209,6 +243,9 @@ export default function StockReportsPage() {
                 <th className="px-6 py-4 text-right text-sm font-bold text-gray-900">Unit Price</th>
                 <th className="px-6 py-4 text-right text-sm font-bold text-gray-900">Total Value</th>
                 <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Status</th>
+                {(userRole === "ADMIN" || userRole === "OWNER") && (
+                  <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -240,6 +277,34 @@ export default function StockReportsPage() {
                         {stock.status}
                       </span>
                     </td>
+                    {(userRole === "ADMIN" || userRole === "OWNER") && (
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditing(stock);
+                            }}
+                            className="p-2 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 transition-colors"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteStock(stock.id);
+                            }}
+                            className="p-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </motion.button>
+                        </div>
+                      </td>
+                    )}
                   </motion.tr>
                 );
               })}
@@ -297,6 +362,93 @@ export default function StockReportsPage() {
           </div>
         </div>
       </motion.div>
+
+      {/* Edit Stock Modal */}
+      {editing && (userRole === "ADMIN" || userRole === "OWNER") && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setEditing(null)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl max-h-96 overflow-y-auto"
+          >
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Stock</h2>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Product Name</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={editing.product}
+                  onChange={(e) => setEditing({ ...editing, product: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">SKU</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={editing.sku}
+                  onChange={(e) => setEditing({ ...editing, sku: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Current Stock</label>
+                <input
+                  type="number"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={editing.currentStock}
+                  onChange={(e) => setEditing({ ...editing, currentStock: Number(e.target.value) })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Status</label>
+                <select
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={editing.status}
+                  onChange={(e) => setEditing({ ...editing, status: e.target.value })}
+                >
+                  <option value="In Stock">In Stock</option>
+                  <option value="Low Stock">Low Stock</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Unit Price</label>
+                <input
+                  type="number"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={editing.unitPrice}
+                  onChange={(e) => setEditing({ ...editing, unitPrice: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => saveStock(editing)}
+                className="flex-1 py-3 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold transition-colors"
+              >
+                Save Changes
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setEditing(null)}
+                className="flex-1 py-3 rounded-lg border-2 border-gray-300 text-gray-900 font-bold hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 }

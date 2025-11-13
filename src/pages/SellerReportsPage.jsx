@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Phone, Globe, TrendingUp, Download, Eye, EyeOff } from "lucide-react";
+import { Mail, Phone, Globe, TrendingUp, Download, Eye, EyeOff, Plus, Edit2, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
+import { useExportSuccess } from "../context/ExportSuccessContext";
+import { useAuth } from "../context/AuthContext";
 
 const sellers = [
   { id: 1, name: "Fresh Spices Wholesale", contact: "+91-9876543210", email: "supplier@freshspices.com", gst: "27AABCV1234F1Z5", city: "Mumbai", rating: 4.8, totalOrders: 245, status: "Active", monthlyVolume: "₹15,45,000", website: "freshspices.com", paymentTerms: "Net 30", avgDeliveryDays: 3 },
@@ -11,9 +13,19 @@ const sellers = [
 ];
 
 export default function SellerReportsPage() {
+  const exportSuccess = useExportSuccess();
+  const { userRole } = useAuth();
+  const [sellers, setSellers] = useState([
+    { id: 1, name: "Fresh Spices Wholesale", contact: "+91-9876543210", email: "supplier@freshspices.com", gst: "27AABCV1234F1Z5", city: "Mumbai", rating: 4.8, totalOrders: 245, status: "Active", monthlyVolume: "₹15,45,000", website: "freshspices.com", paymentTerms: "Net 30", avgDeliveryDays: 3 },
+    { id: 2, name: "Premium Food Ingredients", contact: "+91-9123456789", email: "sales@premiumfood.com", gst: "18AABCS5555G1Z0", city: "Delhi", rating: 4.6, totalOrders: 189, status: "Active", monthlyVolume: "₹12,34,000", website: "premiumfood.com", paymentTerms: "Net 45", avgDeliveryDays: 4 },
+    { id: 3, name: "Organic Farm Exports", contact: "+91-8765432109", email: "info@organicfarm.com", gst: "33AABCO1111H2Z2", city: "Bangalore", rating: 4.9, totalOrders: 156, status: "Active", monthlyVolume: "₹8,90,000", website: "organicfarm.com", paymentTerms: "Net 60", avgDeliveryDays: 5 },
+    { id: 4, name: "Spice Market Ltd", contact: "+91-9999999999", email: "bulk@spicemarket.com", gst: "29AABCO2222K1Z8", city: "Chennai", rating: 4.4, totalOrders: 98, status: "Inactive", monthlyVolume: "₹5,20,000", website: "spicemarket.com", paymentTerms: "Net 15", avgDeliveryDays: 2 },
+  ]);
   const [expandedSeller, setExpandedSeller] = useState(null);
   const [sortBy, setSortBy] = useState("rating");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [editing, setEditing] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const filteredSellers = sellers
     .filter((seller) => filterStatus === "all" || seller.status === filterStatus)
@@ -23,6 +35,15 @@ export default function SellerReportsPage() {
       if (sortBy === "volume") return parseFloat(b.monthlyVolume.replace(/[₹,]/g, "")) - parseFloat(a.monthlyVolume.replace(/[₹,]/g, ""));
       return 0;
     });
+
+  function deleteSeller(id) {
+    setSellers(sellers.filter(s => s.id !== id));
+  }
+
+  function saveSeller(updated) {
+    setSellers(sellers.map(s => (s.id === updated.id ? updated : s)));
+    setEditing(null);
+  }
 
   // Export Sellers Report to Excel
   function handleExportSellers() {
@@ -45,8 +66,8 @@ export default function SellerReportsPage() {
       const worksheet = XLSX.utils.json_to_sheet(exportData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Sellers & Suppliers");
-      XLSX.writeFile(workbook, `seller_reports_${new Date().toISOString().split('T')[0]}.xlsx`);
-      alert("✅ Seller & Supplier reports exported successfully!");
+  XLSX.writeFile(workbook, `seller_reports_${new Date().toISOString().split('T')[0]}.xlsx`);
+  try { exportSuccess.showExportSuccess("Seller & Supplier reports exported successfully"); } catch (e) {}
     } catch (error) {
       alert("⚠️ Error exporting file: " + error.message);
     }
@@ -101,6 +122,17 @@ export default function SellerReportsPage() {
           <Download className="w-5 h-5" />
           Export Report
         </motion.button>
+        {(userRole === "ADMIN" || userRole === "OWNER") && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowAddModal(true)}
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Add Seller
+          </motion.button>
+        )}
       </motion.div>
 
       {/* Sellers Grid */}
@@ -194,25 +226,47 @@ export default function SellerReportsPage() {
                 </div>
               </div>
 
-              {/* Expand Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setExpandedSeller(expandedSeller === seller.id ? null : seller.id)}
-                className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
-              >
-                {expandedSeller === seller.id ? (
+              {/* Expand Button & Actions */}
+              <div className="flex gap-2">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setExpandedSeller(expandedSeller === seller.id ? null : seller.id)}
+                  className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
+                >
+                  {expandedSeller === seller.id ? (
+                    <>
+                      <EyeOff className="w-5 h-5" />
+                      Hide Details
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-5 h-5" />
+                      View Details
+                    </>
+                  )}
+                </motion.button>
+                {(userRole === "ADMIN" || userRole === "OWNER") && (
                   <>
-                    <EyeOff className="w-5 h-5" />
-                    Hide Details
-                  </>
-                ) : (
-                  <>
-                    <Eye className="w-5 h-5" />
-                    View Details
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setEditing(seller)}
+                      className="px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg font-bold transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => deleteSeller(seller.id)}
+                      className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg font-bold transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </motion.button>
                   </>
                 )}
-              </motion.button>
+              </div>
 
               {/* Expanded Details */}
               <motion.div
@@ -289,6 +343,92 @@ export default function SellerReportsPage() {
           <p className="text-xs text-gray-600 mt-2">Combined</p>
         </div>
       </motion.div>
+
+      {/* Edit Seller Modal */}
+      {editing && (userRole === "ADMIN" || userRole === "OWNER") && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setEditing(null)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl max-h-96 overflow-y-auto"
+          >
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Seller</h2>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Name</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={editing.name}
+                  onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Contact</label>
+                <input
+                  type="tel"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={editing.contact}
+                  onChange={(e) => setEditing({ ...editing, contact: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={editing.email}
+                  onChange={(e) => setEditing({ ...editing, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Status</label>
+                <select
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={editing.status}
+                  onChange={(e) => setEditing({ ...editing, status: e.target.value })}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">City</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={editing.city}
+                  onChange={(e) => setEditing({ ...editing, city: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => saveSeller(editing)}
+                className="flex-1 py-3 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-bold transition-colors"
+              >
+                Save Changes
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setEditing(null)}
+                className="flex-1 py-3 rounded-lg border-2 border-gray-300 text-gray-900 font-bold hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 }

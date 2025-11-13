@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
 import { NotificationContext } from "../context/NotificationContext";
 import * as XLSX from "xlsx";
+import { useExportSuccess } from "../context/ExportSuccessContext";
 // eslint-disable-next-line no-unused-vars
 import { Search, Barcode, Plus, Minus, Trash2, Phone, Mail, FileText, Printer, Save, Send, MessageSquare, X, CheckCircle2, Download, Share2, Upload } from "lucide-react";
 
@@ -49,6 +50,7 @@ export default function POSBillingPage() {
   const [cardExpiry, setCardExpiry] = useState("");
   const [upiId, setUpiId] = useState("");
   const { addNotification } = useContext(NotificationContext);
+  const exportSuccess = useExportSuccess();
 
   // Initialize selected customer on first load
   useEffect(() => {
@@ -418,6 +420,7 @@ export default function POSBillingPage() {
       "Export Successful",
       `${products.length} products exported to Excel`
     );
+    try { exportSuccess.showExportSuccess(`${products.length} products exported to Excel`); } catch (e) {}
   }
 
   // Export Customers to Excel
@@ -432,6 +435,7 @@ export default function POSBillingPage() {
       "Export Successful",
       `${customers.length} customers exported to Excel`
     );
+    try { exportSuccess.showExportSuccess(`${customers.length} customers exported to Excel`); } catch (e) {}
   }
 
   // Export Invoices to Excel
@@ -466,6 +470,7 @@ export default function POSBillingPage() {
       "Export Successful",
       `${invoices.length} invoices exported to Excel`
     );
+    try { exportSuccess.showExportSuccess(`${invoices.length} invoices exported to Excel`); } catch (e) {}
   }
 
   // Import Products from Excel

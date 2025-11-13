@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, Download, TrendingUp, DollarSign, AlertCircle, CheckCircle } from "lucide-react";
+import { FileText, Download, TrendingUp, DollarSign, AlertCircle, CheckCircle, Edit2, Trash2, Plus } from "lucide-react";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
 import * as XLSX from "xlsx";
+import { useAuth } from "../context/AuthContext";
+import { useExportSuccess } from "../context/ExportSuccessContext";
 
 const CHART_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -31,8 +33,19 @@ const invoiceWiseTax = [
 ];
 
 export default function TaxReportsPage() {
+  const { userRole } = useAuth();
+  const exportSuccess = useExportSuccess();
   const [dateRange, setDateRange] = useState("month");
   const [chartType, setChartType] = useState("line");
+  const [invoiceWiseTax, setInvoiceWiseTax] = useState([
+    { invoiceNo: "INV-001", date: "2024-11-01", amount: 45000, cgst: 4050, sgst: 4050, total: 8100, status: "Paid" },
+    { invoiceNo: "INV-002", date: "2024-11-02", amount: 38000, cgst: 3420, sgst: 3420, total: 6840, status: "Paid" },
+    { invoiceNo: "INV-003", date: "2024-11-03", amount: 52000, cgst: 4680, sgst: 4680, total: 9360, status: "Paid" },
+    { invoiceNo: "INV-004", date: "2024-11-04", amount: 61000, cgst: 5490, sgst: 5490, total: 10980, status: "Paid" },
+    { invoiceNo: "INV-005", date: "2024-11-05", amount: 55000, cgst: 4950, sgst: 4950, total: 9900, status: "Pending" },
+    { invoiceNo: "INV-006", date: "2024-11-06", amount: 72000, cgst: 6480, sgst: 6480, total: 12960, status: "Paid" },
+  ]);
+  const [editing, setEditing] = useState(null);
 
   const totalInvoiceAmount = invoiceWiseTax.reduce((sum, inv) => sum + inv.amount, 0);
   const totalCGST = invoiceWiseTax.reduce((sum, inv) => sum + inv.cgst, 0);
@@ -40,6 +53,15 @@ export default function TaxReportsPage() {
   const totalTax = totalCGST + totalSGST;
   const paidTax = invoiceWiseTax.filter(inv => inv.status === "Paid").reduce((sum, inv) => sum + inv.total, 0);
   const pendingTax = invoiceWiseTax.filter(inv => inv.status === "Pending").reduce((sum, inv) => sum + inv.total, 0);
+
+  function deleteInvoice(invoiceNo) {
+    setInvoiceWiseTax(invoiceWiseTax.filter(inv => inv.invoiceNo !== invoiceNo));
+  }
+
+  function saveInvoice(updated) {
+    setInvoiceWiseTax(invoiceWiseTax.map(inv => (inv.invoiceNo === updated.invoiceNo ? updated : inv)));
+    setEditing(null);
+  }
 
   // Export Tax Report to Excel
   function handleExportTax() {
@@ -90,9 +112,9 @@ export default function TaxReportsPage() {
       XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
 
       XLSX.writeFile(workbook, `tax_reports_${new Date().toISOString().split('T')[0]}.xlsx`);
-      alert("✅ Tax reports exported successfully!");
+      try { exportSuccess.showExportSuccess("Tax reports exported successfully!"); } catch (e) {}
     } catch (error) {
-      alert("⚠️ Error exporting file: " + error.message);
+      try { exportSuccess.showExportSuccess("Error exporting file: " + error.message); } catch (e) {}
     }
   }
 
@@ -405,6 +427,9 @@ export default function TaxReportsPage() {
                 <th className="px-6 py-4 text-right text-sm font-bold text-gray-900">SGST (9%)</th>
                 <th className="px-6 py-4 text-right text-sm font-bold text-gray-900">Total Tax</th>
                 <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Status</th>
+                {(userRole === "ADMIN" || userRole === "OWNER") && (
+                  <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -443,6 +468,28 @@ export default function TaxReportsPage() {
                       )}
                     </span>
                   </td>
+                  {(userRole === "ADMIN" || userRole === "OWNER") && (
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setEditing(invoice)}
+                          className="p-2 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 transition-colors"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => deleteInvoice(invoice.invoiceNo)}
+                          className="p-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </motion.button>
+                      </div>
+                    </td>
+                  )}
                 </motion.tr>
               ))}
             </tbody>
@@ -469,6 +516,92 @@ export default function TaxReportsPage() {
           </table>
         </div>
       </motion.div>
+
+      {/* Edit Invoice Modal */}
+      {editing && (userRole === "ADMIN" || userRole === "OWNER") && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setEditing(null)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl max-h-96 overflow-y-auto"
+          >
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Invoice Tax</h2>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Invoice Number</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={editing.invoiceNo}
+                  disabled
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Amount</label>
+                <input
+                  type="number"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={editing.amount}
+                  onChange={(e) => setEditing({ ...editing, amount: Number(e.target.value) })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">CGST (9%)</label>
+                <input
+                  type="number"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={editing.cgst}
+                  onChange={(e) => setEditing({ ...editing, cgst: Number(e.target.value) })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">SGST (9%)</label>
+                <input
+                  type="number"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={editing.sgst}
+                  onChange={(e) => setEditing({ ...editing, sgst: Number(e.target.value) })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Status</label>
+                <select
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={editing.status}
+                  onChange={(e) => setEditing({ ...editing, status: e.target.value })}
+                >
+                  <option value="Paid">Paid</option>
+                  <option value="Pending">Pending</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => saveInvoice(editing)}
+                className="flex-1 py-3 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold transition-colors"
+              >
+                Save Changes
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setEditing(null)}
+                className="flex-1 py-3 rounded-lg border-2 border-gray-300 text-gray-900 font-bold hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 }

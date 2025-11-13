@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import * as XLSX from "xlsx";
 import { useAuth } from "../context/AuthContext";
+import { useExportSuccess } from "../context/ExportSuccessContext";
 // eslint-disable-next-line no-unused-vars
 import { Plus, Edit2, Trash2, Search, Mail, Phone, CheckCircle, Clock, AlertCircle, Download, Upload } from "lucide-react";
 
@@ -24,7 +25,7 @@ export default function CustomersPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [notification, setNotification] = useState(null);
-  const [successModal, setSuccessModal] = useState(null);
+  const exportSuccess = useExportSuccess();
   const [newCustomer, setNewCustomer] = useState({
     name: "",
     email: "",
@@ -166,10 +167,8 @@ export default function CustomersPage() {
       ];
 
       const timestamp = new Date().toISOString().split("T")[0];
-      XLSX.writeFile(workbook, `customers_${timestamp}.xlsx`);
-      
-      setSuccessModal({ type: "export", count: customers.length });
-      setTimeout(() => setSuccessModal(null), 4000);
+  XLSX.writeFile(workbook, `customers_${timestamp}.xlsx`);
+  try { exportSuccess.showExportSuccess(`${customers.length} customers exported`); } catch (e) {}
     } catch (error) {
       showNotification("❌ Error exporting customers to CSV", "error");
       console.error("Export error:", error);
@@ -218,8 +217,7 @@ export default function CustomersPage() {
         const newCustomers = validCustomers.filter(c => !existingIds.has(c.id));
         
         setCustomers([...customers, ...newCustomers]);
-        setSuccessModal({ type: "import", count: newCustomers.length });
-        setTimeout(() => setSuccessModal(null), 4000);
+        try { exportSuccess.showExportSuccess(`${newCustomers.length} customers imported`); } catch (e) {}
       };
       
       reader.readAsArrayBuffer(file);
@@ -709,8 +707,8 @@ export default function CustomersPage() {
         </motion.div>
       )}
 
-      {/* Success Modal for Export/Import */}
-      {successModal && (
+      {/* Global Success Modal for Export/Import (uses ExportSuccessContext) */}
+      {exportSuccess.successModal && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -737,7 +735,7 @@ export default function CustomersPage() {
               transition={{ delay: 0.4 }}
               className="text-3xl font-bold text-gray-900 mb-2"
             >
-              {successModal.type === "export" ? "Exported Successfully" : "Imported Successfully"}
+              Success
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, y: 10 }}
@@ -745,9 +743,7 @@ export default function CustomersPage() {
               transition={{ delay: 0.5 }}
               className="text-gray-600 text-lg"
             >
-              {successModal.type === "export"
-                ? `Successfully exported ${successModal.count} customers to CSV file`
-                : `Successfully imported ${successModal.count} customers from CSV file`}
+              {exportSuccess.successModal.message}
             </motion.p>
           </motion.div>
         </motion.div>

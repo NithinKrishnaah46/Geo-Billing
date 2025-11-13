@@ -29,6 +29,7 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   const login = (phone, role) => {
+    // Logout any previous user first - ensures only ONE user session at a time
     const newUser = {
       id: `user_${Date.now()}`,
       phone,
@@ -44,43 +45,35 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const switchRole = (phone, newRole) => {
+    // This function ensures switching roles logs out the previous user
+    // A phone number can only be logged in with ONE role at a time
+    if (user && user.phone === phone) {
+      // Same phone, different role - logout and login with new role
+      logout();
+      return login(phone, newRole);
+    }
+    // Different phone - logout previous user
+    logout();
+    return login(phone, newRole);
+  };
+
   const isAuthenticated = !!user;
   const userRole = user?.role || null;
 
-  // Permission checker
+  // Permission checker (ADMIN has all permissions by default)
+  // For other roles, use PermissionsContext
   const hasPermission = (permission) => {
     if (!user) return false;
 
-    const permissions = {
-      ADMIN: [
-        "view_dashboard",
-        "manage_pos",
-        "manage_inventory",
-        "manage_customers",
-        "view_reports",
-        "manage_reports",
-        "export_all",
-        "import_all",
-        "manage_users",
-        "view_audit",
-      ],
-      OWNER: [
-        "view_dashboard",
-        "manage_customers",
-        "view_inventory",
-        "view_reports",
-        "manage_transit_reports",
-        "manage_tax_reports",
-        "export_own",
-      ],
-      SALES_EXECUTIVE: [
-        "view_customers",
-        "manage_pos",
-        "view_inventory",
-      ],
-    };
+    // ADMIN always has all permissions
+    if (user.role === "ADMIN") {
+      return true;
+    }
 
-    return permissions[user.role]?.includes(permission) || false;
+    // For OWNER and SALES_EXECUTIVE, use PermissionsContext
+    // Components should use usePermissions hook for role-specific permissions
+    return false;
   };
 
   const value = {
@@ -90,6 +83,7 @@ export function AuthProvider({ children }) {
     userRole,
     login,
     logout,
+    switchRole,
     hasPermission,
   };
 

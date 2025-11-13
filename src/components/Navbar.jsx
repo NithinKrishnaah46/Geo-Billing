@@ -18,6 +18,7 @@ import {
   Trash2,
   CheckCheck,
   LogOut,
+  Shield,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { NotificationContext } from "../context/NotificationContext";
@@ -334,6 +335,14 @@ export default function Navbar() {
             active={isActive("/settings")}
             to="/settings"
           />
+          {userRole === "ADMIN" && (
+            <IconBtn
+              icon={Shield}
+              label="Control Panel"
+              active={isActive("/admin/control-panel")}
+              to="/admin/control-panel"
+            />
+          )}
           <motion.div
             whileHover={{ scale: 1.02 }}
             className="p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
@@ -535,6 +544,16 @@ export default function Navbar() {
                 </motion.div>
               )}
             </>
+          )}
+
+          {/* Admin Control Panel - Only show for ADMIN users */}
+          {userRole === "ADMIN" && (
+            <IconBtn
+              icon={Shield}
+              label="Control Panel"
+              active={isActive("/admin/control-panel")}
+              to="/admin/control-panel"
+            />
           )}
         </motion.div>
       )}

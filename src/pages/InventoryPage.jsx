@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, Edit2, Trash2, Search, Download, Upload, Package, AlertTriangle, DollarSign } from "lucide-react";
 import * as XLSX from "xlsx";
+import { useContext } from "react";
+import { NotificationContext } from "../context/NotificationContext";
+import { useExportSuccess } from "../context/ExportSuccessContext";
 
 const SAMPLE_PRODUCTS = [
   { id: "p1", name: "Paneer Butter Masala", category: "Main Course", sku: "CUR-PBM", barcode: "8903001000001", stock: 999, purchasePrice: 120, sellingPrice: 280, tax: 5, status: "In Stock" },
@@ -13,6 +16,8 @@ const SAMPLE_PRODUCTS = [
 ];
 
 export default function InventoryPage() {
+  const { addNotification } = useContext(NotificationContext);
+  const exportSuccess = useExportSuccess();
   const [products, setProducts] = useState(SAMPLE_PRODUCTS);
   const [editing, setEditing] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -47,7 +52,8 @@ export default function InventoryPage() {
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");
       XLSX.writeFile(workbook, `inventory_${new Date().toISOString().split('T')[0]}.xlsx`);
-      alert("✅ Inventory exported successfully!");
+      addNotification("product", "Export Successful", `${products.length} products exported from Inventory`);
+      try { exportSuccess.showExportSuccess(`${products.length} products exported from Inventory`); } catch (e) {}
     } catch (error) {
       alert("⚠️ Error exporting file: " + error.message);
     }
@@ -80,7 +86,10 @@ export default function InventoryPage() {
         }));
         
         setProducts([...products, ...newProducts]);
-        alert(`✅ ${newProducts.length} products imported successfully!`);
+        setTimeout(()=>{
+          addNotification("product", "Import Successful", `${newProducts.length} products imported into Inventory`);
+          try { exportSuccess.showExportSuccess(`${newProducts.length} products imported into Inventory`); } catch(e) {}
+        }, 200);
       } catch (error) {
         alert("⚠️ Error importing file: " + error.message);
       }
