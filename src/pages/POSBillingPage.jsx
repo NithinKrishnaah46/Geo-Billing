@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
 import { NotificationContext } from "../context/NotificationContext";
+import * as XLSX from "xlsx";
 // eslint-disable-next-line no-unused-vars
-import { Search, Barcode, Plus, Minus, Trash2, Phone, Mail, FileText, Printer, Save, Send, MessageSquare, X, CheckCircle2, Download, Share2 } from "lucide-react";
+import { Search, Barcode, Plus, Minus, Trash2, Phone, Mail, FileText, Printer, Save, Send, MessageSquare, X, CheckCircle2, Download, Share2, Upload } from "lucide-react";
 
 const SAMPLE_PRODUCTS = [
   { id: "p1", name: "T-shirt - Blue", price: 499, sku: "TS-BL-001", stock: 42 },
@@ -405,6 +406,142 @@ export default function POSBillingPage() {
     setCart((c) => c.filter((x) => x.id !== id));
   }
 
+  // Export Products to Excel
+  function handleExportProducts() {
+    const worksheet = XLSX.utils.json_to_sheet(products);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
+    XLSX.writeFile(workbook, "products.xlsx");
+    
+    addNotification(
+      "product",
+      "Export Successful",
+      `${products.length} products exported to Excel`
+    );
+  }
+
+  // Export Customers to Excel
+  function handleExportCustomers() {
+    const worksheet = XLSX.utils.json_to_sheet(customers);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Customers");
+    XLSX.writeFile(workbook, "customers.xlsx");
+    
+    addNotification(
+      "product",
+      "Export Successful",
+      `${customers.length} customers exported to Excel`
+    );
+  }
+
+  // Export Invoices to Excel
+  function handleExportInvoices() {
+    const invoices = JSON.parse(localStorage.getItem("invoices") || "[]");
+    if (invoices.length === 0) {
+      alert("⚠️ No invoices to export");
+      return;
+    }
+    
+    // Flatten invoice data for Excel
+    const flatInvoices = invoices.map(inv => ({
+      "Invoice #": inv.invoiceNo,
+      "Date": inv.date,
+      "Customer Name": inv.customer.name,
+      "Customer Phone": inv.customer.phone,
+      "Items Count": inv.items.length,
+      "Subtotal": inv.subtotal,
+      "CGST": inv.cgst,
+      "SGST": inv.sgst,
+      "Total": inv.total,
+      "Payment Mode": inv.paymentMode
+    }));
+    
+    const worksheet = XLSX.utils.json_to_sheet(flatInvoices);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Invoices");
+    XLSX.writeFile(workbook, "invoices.xlsx");
+    
+    addNotification(
+      "sale",
+      "Export Successful",
+      `${invoices.length} invoices exported to Excel`
+    );
+  }
+
+  // Import Products from Excel
+  function handleImportProducts(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = event.target?.result;
+        const workbook = XLSX.read(data, { type: "binary" });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        // Validate and add imported products
+        const newProducts = jsonData.map((item, idx) => ({
+          id: `p_import_${Date.now()}_${idx}`,
+          name: item.name || "Unnamed",
+          price: parseFloat(item.price) || 0,
+          sku: item.sku || `SKU-${idx}`,
+          stock: parseInt(item.stock) || 0
+        }));
+        
+        setProducts([...products, ...newProducts]);
+        
+        addNotification(
+          "product",
+          "Import Successful",
+          `${newProducts.length} products imported from Excel`
+        );
+      } catch (error) {
+        alert("⚠️ Error importing file: " + error.message);
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = ""; // Reset input
+  }
+
+  // Import Customers from Excel
+  function handleImportCustomers(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = event.target?.result;
+        const workbook = XLSX.read(data, { type: "binary" });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        // Validate and add imported customers
+        const newCustomers = jsonData.map((item, idx) => ({
+          id: `c_import_${Date.now()}_${idx}`,
+          name: item.name || "Unnamed",
+          phone: item.phone || "",
+          email: item.email || "",
+          gst: item.gst || "N/A"
+        }));
+        
+        setCustomers([...customers, ...newCustomers]);
+        
+        addNotification(
+          "product",
+          "Import Successful",
+          `${newCustomers.length} customers imported from Excel`
+        );
+      } catch (error) {
+        alert("⚠️ Error importing file: " + error.message);
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = ""; // Reset input
+  }
+
   const subtotal = cart.reduce((s, it) => s + it.price * it.qty, 0);
   const cgst = gstEnabled ? Math.round(subtotal * 0.09) : 0;
   const sgst = gstEnabled ? Math.round(subtotal * 0.09) : 0;
@@ -774,6 +911,64 @@ export default function POSBillingPage() {
               <Send className="w-5 h-5" />
               Send via WhatsApp
             </motion.button>
+
+            {/* Export/Import Section */}
+            <div className="border-t-2 border-gray-200 pt-4 mt-4">
+              <p className="text-sm font-bold text-gray-700 mb-3">Export Data</p>
+              <div className="grid grid-cols-3 gap-2">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleExportProducts}
+                  className="py-2 rounded-lg bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 transition-colors text-xs flex items-center justify-center gap-1"
+                >
+                  <Download className="w-4 h-4" />
+                  Products
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleExportCustomers}
+                  className="py-2 rounded-lg bg-purple-100 text-purple-700 font-semibold hover:bg-purple-200 transition-colors text-xs flex items-center justify-center gap-1"
+                >
+                  <Download className="w-4 h-4" />
+                  Customers
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleExportInvoices}
+                  className="py-2 rounded-lg bg-orange-100 text-orange-700 font-semibold hover:bg-orange-200 transition-colors text-xs flex items-center justify-center gap-1"
+                >
+                  <Download className="w-4 h-4" />
+                  Invoices
+                </motion.button>
+              </div>
+
+              <p className="text-sm font-bold text-gray-700 mb-3 mt-4">Import Data</p>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="py-2 rounded-lg bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 transition-colors text-xs flex items-center justify-center gap-1 cursor-pointer">
+                  <Upload className="w-4 h-4" />
+                  Products
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleImportProducts}
+                    className="hidden"
+                  />
+                </label>
+                <label className="py-2 rounded-lg bg-purple-100 text-purple-700 font-semibold hover:bg-purple-200 transition-colors text-xs flex items-center justify-center gap-1 cursor-pointer">
+                  <Upload className="w-4 h-4" />
+                  Customers
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleImportCustomers}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
           </div>
         </motion.div>
       </div>
