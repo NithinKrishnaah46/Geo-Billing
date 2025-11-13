@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, Edit2, Trash2, Search, Download, Upload, Package, AlertTriangle, DollarSign } from "lucide-react";
+import * as XLSX from "xlsx";
 
 const SAMPLE_PRODUCTS = [
   { id: "p1", name: "Paneer Butter Masala", category: "Main Course", sku: "CUR-PBM", barcode: "8903001000001", stock: 999, purchasePrice: 120, sellingPrice: 280, tax: 5, status: "In Stock" },
@@ -39,6 +40,55 @@ export default function InventoryPage() {
     setProducts((p) => p.filter((it) => it.id !== id));
   }
 
+  // Export Products to Excel
+  function handleExportProducts() {
+    try {
+      const worksheet = XLSX.utils.json_to_sheet(products);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");
+      XLSX.writeFile(workbook, `inventory_${new Date().toISOString().split('T')[0]}.xlsx`);
+      alert("✅ Inventory exported successfully!");
+    } catch (error) {
+      alert("⚠️ Error exporting file: " + error.message);
+    }
+  }
+
+  // Import Products from Excel
+  function handleImportProducts(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = event.target?.result;
+        const workbook = XLSX.read(data, { type: "binary" });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        const newProducts = jsonData.map((item, idx) => ({
+          id: `p_${Date.now()}_${idx}`,
+          name: item.name || "Unnamed",
+          category: item.category || "General",
+          sku: item.sku || `SKU-${idx}`,
+          barcode: item.barcode || `BAR-${idx}`,
+          stock: parseInt(item.stock) || 0,
+          purchasePrice: parseFloat(item.purchasePrice) || 0,
+          sellingPrice: parseFloat(item.sellingPrice) || 0,
+          tax: parseFloat(item.tax) || 0,
+          status: item.stock > 100 ? "In Stock" : item.stock > 0 ? "Low Stock" : "Out of Stock"
+        }));
+        
+        setProducts([...products, ...newProducts]);
+        alert(`✅ ${newProducts.length} products imported successfully!`);
+      } catch (error) {
+        alert("⚠️ Error importing file: " + error.message);
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = "";
+  }
+
   // Calculate statistics
   const totalProducts = products.length;
   const lowStockAlerts = products.filter(p => p.stock < 100).length;
@@ -61,19 +111,22 @@ export default function InventoryPage() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handleExportProducts}
               className="px-6 py-3 flex items-center gap-2 bg-white border-2 border-gray-300 text-gray-900 rounded-lg font-bold hover:border-green-500 transition-colors"
             >
               <Download className="w-5 h-5" />
               Export
             </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-6 py-3 flex items-center gap-2 bg-white border-2 border-gray-300 text-gray-900 rounded-lg font-bold hover:border-green-500 transition-colors"
-            >
+            <label className="px-6 py-3 flex items-center gap-2 bg-white border-2 border-gray-300 text-gray-900 rounded-lg font-bold hover:border-green-500 transition-colors cursor-pointer">
               <Upload className="w-5 h-5" />
-              Import CSV
-            </motion.button>
+              Import Excel
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportProducts}
+                className="hidden"
+              />
+            </label>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}

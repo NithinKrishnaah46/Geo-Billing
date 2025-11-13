@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, TrendingDown, Package, Warehouse, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 
 const stockDetails = [
   { id: 1, product: "Paneer Butter Masala", sku: "SKU-2024-001", warehouse: "Main Warehouse", currentStock: 245, minLevel: 50, maxLevel: 500, status: "In Stock", location: "Rack A-12", lastUpdated: "2 hours ago", turnoverRate: "18.2/month", unitPrice: 280, totalValue: 68600 },
@@ -28,6 +29,45 @@ export default function StockReportsPage() {
   const totalInventoryValue = stockDetails.reduce((acc, s) => acc + s.totalValue, 0);
   const lowStockCount = stockDetails.filter(s => s.status === "Low Stock" || s.status === "Critical").length;
   const totalUnits = stockDetails.reduce((acc, s) => acc + s.currentStock, 0);
+
+  // Export Stock Report to Excel
+  function handleExportStock() {
+    try {
+      const exportData = stockDetails.map(s => ({
+        Product: s.product,
+        SKU: s.sku,
+        Warehouse: s.warehouse,
+        "Current Stock": s.currentStock,
+        "Min Level": s.minLevel,
+        "Max Level": s.maxLevel,
+        Status: s.status,
+        Location: s.location,
+        "Last Updated": s.lastUpdated,
+        "Turnover Rate": s.turnoverRate,
+        "Unit Price": s.unitPrice,
+        "Total Value": s.totalValue
+      }));
+      
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Stock Report");
+      
+      // Add summary sheet
+      const summaryData = [{
+        "Total Units in Stock": totalUnits,
+        "Total Inventory Value": `₹${totalInventoryValue.toLocaleString()}`,
+        "Low Stock Items": lowStockCount,
+        "Date Exported": new Date().toLocaleDateString()
+      }];
+      const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
+      
+      XLSX.writeFile(workbook, `stock_reports_${new Date().toISOString().split('T')[0]}.xlsx`);
+      alert("✅ Warehouse & Stock reports exported successfully!");
+    } catch (error) {
+      alert("⚠️ Error exporting file: " + error.message);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
@@ -141,6 +181,7 @@ export default function StockReportsPage() {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          onClick={handleExportStock}
           className="ml-auto px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold transition-colors flex items-center gap-2"
         >
           <Download className="w-5 h-5" />

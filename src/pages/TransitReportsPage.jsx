@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Truck, Clock, MapPin, Package, CheckCircle, AlertCircle, Download, Map } from "lucide-react";
+import * as XLSX from "xlsx";
 
 const transitDetails = [
   { id: 1, shipmentId: "SHIP-2024-001", supplier: "Fresh Spices Wholesale", products: "Paneer (200kg)", origin: "Mumbai", destination: "Delhi Warehouse", status: "In Transit", expectedDelivery: "2024-11-14", currentLocation: "Indore Junction", daysInTransit: 2, totalDistance: 800, distanceCovered: 520, trackingUrl: "tracking123" },
@@ -52,6 +53,47 @@ export default function TransitReportsPage() {
     const weight = parseFloat(t.products.match(/\((\d+)kg\)/)[1]);
     return acc + weight;
   }, 0);
+
+  // Export Transit Report to Excel
+  function handleExportTransit() {
+    try {
+      const exportData = transitDetails.map(t => ({
+        "Shipment ID": t.shipmentId,
+        Supplier: t.supplier,
+        Products: t.products,
+        Origin: t.origin,
+        Destination: t.destination,
+        Status: t.status,
+        "Expected Delivery": t.expectedDelivery,
+        "Current Location": t.currentLocation,
+        "Days in Transit": t.daysInTransit,
+        "Total Distance (km)": t.totalDistance,
+        "Distance Covered (km)": t.distanceCovered,
+        "Progress %": Math.round((t.distanceCovered / t.totalDistance) * 100)
+      }));
+      
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Transit Report");
+      
+      // Add summary sheet
+      const summaryData = [{
+        "Total Shipments": transitDetails.length,
+        "Delivered": deliveredCount,
+        "In Transit": inTransitCount,
+        "Pending": pendingCount,
+        "Total Weight (kg)": totalWeight,
+        "Date Exported": new Date().toLocaleDateString()
+      }];
+      const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
+      
+      XLSX.writeFile(workbook, `transit_reports_${new Date().toISOString().split('T')[0]}.xlsx`);
+      alert("✅ Transit & Shipment reports exported successfully!");
+    } catch (error) {
+      alert("⚠️ Error exporting file: " + error.message);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
@@ -163,6 +205,7 @@ export default function TransitReportsPage() {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          onClick={handleExportTransit}
           className="ml-auto px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold transition-colors flex items-center gap-2"
         >
           <Download className="w-5 h-5" />

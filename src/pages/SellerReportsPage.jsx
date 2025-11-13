@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, Phone, Globe, TrendingUp, Download, Eye, EyeOff } from "lucide-react";
+import * as XLSX from "xlsx";
 
 const sellers = [
   { id: 1, name: "Fresh Spices Wholesale", contact: "+91-9876543210", email: "supplier@freshspices.com", gst: "27AABCV1234F1Z5", city: "Mumbai", rating: 4.8, totalOrders: 245, status: "Active", monthlyVolume: "₹15,45,000", website: "freshspices.com", paymentTerms: "Net 30", avgDeliveryDays: 3 },
@@ -22,6 +23,34 @@ export default function SellerReportsPage() {
       if (sortBy === "volume") return parseFloat(b.monthlyVolume.replace(/[₹,]/g, "")) - parseFloat(a.monthlyVolume.replace(/[₹,]/g, ""));
       return 0;
     });
+
+  // Export Sellers Report to Excel
+  function handleExportSellers() {
+    try {
+      const exportData = sellers.map(s => ({
+        Name: s.name,
+        Contact: s.contact,
+        Email: s.email,
+        GST: s.gst,
+        City: s.city,
+        Rating: s.rating,
+        "Total Orders": s.totalOrders,
+        "Monthly Volume": s.monthlyVolume,
+        Status: s.status,
+        Website: s.website,
+        "Payment Terms": s.paymentTerms,
+        "Avg Delivery Days": s.avgDeliveryDays
+      }));
+      
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Sellers & Suppliers");
+      XLSX.writeFile(workbook, `seller_reports_${new Date().toISOString().split('T')[0]}.xlsx`);
+      alert("✅ Seller & Supplier reports exported successfully!");
+    } catch (error) {
+      alert("⚠️ Error exporting file: " + error.message);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
@@ -66,6 +95,7 @@ export default function SellerReportsPage() {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          onClick={handleExportSellers}
           className="ml-auto px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold transition-colors flex items-center gap-2"
         >
           <Download className="w-5 h-5" />

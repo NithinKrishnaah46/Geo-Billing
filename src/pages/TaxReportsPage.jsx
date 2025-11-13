@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { FileText, Download, TrendingUp, DollarSign, AlertCircle, CheckCircle } from "lucide-react";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
+import * as XLSX from "xlsx";
 
 const CHART_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -40,6 +41,61 @@ export default function TaxReportsPage() {
   const paidTax = invoiceWiseTax.filter(inv => inv.status === "Paid").reduce((sum, inv) => sum + inv.total, 0);
   const pendingTax = invoiceWiseTax.filter(inv => inv.status === "Pending").reduce((sum, inv) => sum + inv.total, 0);
 
+  // Export Tax Report to Excel
+  function handleExportTax() {
+    try {
+      // Invoice-wise tax data
+      const invoiceData = invoiceWiseTax.map(inv => ({
+        "Invoice No": inv.invoiceNo,
+        Date: inv.date,
+        "Amount": inv.amount,
+        "CGST (9%)": inv.cgst,
+        "SGST (9%)": inv.sgst,
+        "Total Tax": inv.total,
+        Status: inv.status
+      }));
+
+      // Monthly tax summary
+      const monthlyData = taxData.map(t => ({
+        Month: t.month,
+        "CGST": t.cgst,
+        "SGST": t.sgst,
+        "IGST": t.igst,
+        "Total Tax": t.totalTax
+      }));
+
+      // Overall summary
+      const summaryData = [{
+        "Total Invoice Amount": totalInvoiceAmount,
+        "Total CGST": totalCGST,
+        "Total SGST": totalSGST,
+        "Total Tax": totalTax,
+        "Paid Tax": paidTax,
+        "Pending Tax": pendingTax,
+        "Date Exported": new Date().toLocaleDateString()
+      }];
+
+      const workbook = XLSX.utils.book_new();
+
+      // Add invoice data sheet
+      const invoiceSheet = XLSX.utils.json_to_sheet(invoiceData);
+      XLSX.utils.book_append_sheet(workbook, invoiceSheet, "Invoice Wise Tax");
+
+      // Add monthly data sheet
+      const monthlySheet = XLSX.utils.json_to_sheet(monthlyData);
+      XLSX.utils.book_append_sheet(workbook, monthlySheet, "Monthly Summary");
+
+      // Add overall summary
+      const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
+
+      XLSX.writeFile(workbook, `tax_reports_${new Date().toISOString().split('T')[0]}.xlsx`);
+      alert("✅ Tax reports exported successfully!");
+    } catch (error) {
+      alert("⚠️ Error exporting file: " + error.message);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       {/* Header */}
@@ -68,10 +124,11 @@ export default function TaxReportsPage() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handleExportTax}
               className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold transition-colors flex items-center gap-2"
             >
               <Download className="w-5 h-5" />
-              Export PDF
+              Export Excel
             </motion.button>
           </div>
         </div>

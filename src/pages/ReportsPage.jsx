@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Calendar, Download, TrendingUp, DollarSign, ShoppingCart, Users, Zap, Target } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import * as XLSX from "xlsx";
 
 const CHART_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -46,6 +47,40 @@ export default function ReportsPage() {
     { label: "Market Share", value: "32%", color: "text-orange-600", bg: "bg-orange-50" },
   ];
 
+  // Export Reports to Excel
+  function handleExportReports() {
+    try {
+      const workbook = XLSX.utils.book_new();
+      
+      // Sales Data sheet
+      const salesSheet = XLSX.utils.json_to_sheet(salesData);
+      XLSX.utils.book_append_sheet(workbook, salesSheet, "Sales Data");
+      
+      // Category Data sheet
+      const categorySheet = XLSX.utils.json_to_sheet(categoryData);
+      XLSX.utils.book_append_sheet(workbook, categorySheet, "Category Data");
+      
+      // Top Products sheet
+      const productsSheet = XLSX.utils.json_to_sheet(topProducts);
+      XLSX.utils.book_append_sheet(workbook, productsSheet, "Top Products");
+      
+      // Reports Summary
+      const reportsSummary = reports.map(r => ({
+        Title: r.title,
+        Value: r.value,
+        Change: r.change,
+        Trend: r.trend
+      }));
+      const summarySheet = XLSX.utils.json_to_sheet(reportsSummary);
+      XLSX.utils.book_append_sheet(workbook, summarySheet, "Reports Summary");
+      
+      XLSX.writeFile(workbook, `reports_${new Date().toISOString().split('T')[0]}.xlsx`);
+      alert("✅ Reports exported successfully!");
+    } catch (error) {
+      alert("⚠️ Error exporting file: " + error.message);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       {/* Header */}
@@ -73,6 +108,7 @@ export default function ReportsPage() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handleExportReports}
               className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold transition-colors flex items-center gap-2"
             >
               <Download className="w-5 h-5" />
